@@ -1,0 +1,14 @@
+{
+  "name": "node-sbrick-controller",
+  "version": "0.0.1",
+  "description": "Control the SBrick from nodejs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "zkiiito",
+  "license": "MIT",
+  "dependencies": {
+    "noble": "^1.6.0"
+  }
+}
