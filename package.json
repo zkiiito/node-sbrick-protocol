@@ -9,6 +9,8 @@
   "author": "zkiiito",
   "license": "MIT",
   "dependencies": {
-    "noble": "^1.6.0"
+    "express": "^4.14.0",
+    "noble": "^1.6.0",
+    "socket.io": "^1.4.8"
   }
 }

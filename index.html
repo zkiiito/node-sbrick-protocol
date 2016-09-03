@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>SBrick controller</title>
+</head>
+<body>
+<input type="text" id="uuid" placeholder="uuid"><br>
+<button id="connect">connect to your SBrick</button><br>
+Use the arrow keys to control your creation.
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    document.getElementById('connect').onclick = function () {
+        this.remove();
+        var uuid = document.getElementById('uuid').value;
+
+        var socket = io.connect('http://localhost:8000');
+        socket.emit('connectSBrick', uuid);
+
+        document.onkeydown = function (event) {
+            event = event || window.event;
+
+            var e = event.keyCode;
+
+            //up
+            if (e === 38) {
+                socket.emit('controlSBrickChannel', uuid, 1, 240);
+            }
+
+            //down
+            if (e === 40) {
+                socket.emit('controlSBrickChannel', uuid, 1, -240);
+            }
+
+            //left
+            if (e === 37) {
+                socket.emit('controlSBrickChannel', uuid, 2, 240);
+            }
+
+            //right
+            if (e === 39) {
+                socket.emit('controlSBrickChannel', uuid, 2, -240);
+            }
+        };
+
+        document.onkeyup = function (event) {
+            event = event || window.event;
+
+            var e = event.keyCode;
+
+            //up
+            if (e === 38) {
+                socket.emit('controlSBrickChannel', uuid, 1, 0);
+            }
+
+            //down
+            if (e === 40) {
+                socket.emit('controlSBrickChannel', uuid, 1, 0);
+            }
+
+            //left
+            if (e === 37) {
+                socket.emit('controlSBrickChannel', uuid, 2, 0);
+            }
+
+            //right
+            if (e === 39) {
+                socket.emit('controlSBrickChannel', uuid, 2, 0);
+            }
+        };
+    }
+
+</script>
+</body>
+</html>
