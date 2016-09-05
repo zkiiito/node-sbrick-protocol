@@ -15,14 +15,15 @@ function SBrick (uuid) {
     ];
 }
 
-SBrick.prototype.start = function (startFunction) {
+SBrick.prototype.start = function (callback, startFunction) {
     this.connect((err) => {
-        if (!err) {
-            if (startFunction) {
-                startFunction(this);
-            }
-            this.run();
+        if (err) {
+            return callback(err);
         }
+        if (startFunction) {
+            startFunction(this);
+        }
+        this.run(callback);
     })
 };
 
@@ -64,10 +65,6 @@ SBrick.prototype.startScan = function (callback) {
                     this.connect();
                 });
 
-                peripheral.once('rssiUpdate', function(rssi) {
-                    console.log('rssi updated');
-                });
-
                 peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
                     if (err) {
                         console.log("service discovery error", err);
@@ -90,7 +87,7 @@ SBrick.prototype.startScan = function (callback) {
     noble.startScanning()
 };
 
-SBrick.prototype.run = function () {
+SBrick.prototype.run = function (callback) {
     this.characteristic.on('data',function (data) {
         console.log('data', data);
     });
@@ -107,6 +104,8 @@ SBrick.prototype.run = function () {
             this.writeCommand(b);
         });
     }, 200);
+
+    callback(null);
 };
 
 SBrick.prototype.writeCommand = function (cmd) {
@@ -114,7 +113,7 @@ SBrick.prototype.writeCommand = function (cmd) {
         cmd = new Buffer(cmd, "hex");
     }
 
-    this.characteristic.write(cmd, false, function (err) {
+    this.characteristic.write(cmd, false, (err) => {
         if (err) {
             console.log("write error", err, cmd);
         }
@@ -134,6 +133,68 @@ SBrick.prototype.readCommand = function (cmd, callback) {
             callback(null, data);
         }
     });
+};
+
+
+SBrick.scanSBricks = function (callback) {
+    if (noble.state === 'poweredOn') {
+        scanSBricks(callback);
+    } else {
+        noble.on('stateChange', (state) => {
+            if (state === 'poweredOn') {
+                noble.off('stateChange');
+                scanSBricks(callback);
+            }
+        });
+    }
+};
+
+const scanSBricks = function (callback) {
+    var sbrickUuids = [];
+    noble.on('discover', (peripheral) => {
+        console.log('found', peripheral.advertisement.manufacturerData);
+
+        /*
+         manufacturerData: <Buffer 98 01 06 00 00 05 00 05 0c 04 01 00 34 50 07 02 de 42 5d f3 7b 98 02 03 00>,
+98 01
+06:
+00 00 sbrick
+05 00 5.0
+05 0c 5.12
+04:
+01
+00
+34
+50
+07:
+02: serial
+de
+42
+5d
+f3
+7b
+98
+02:
+03: security
+00 unsecured
+         data <Buffer 28 50 a0 57>
+
+         */
+
+
+        //if (peripheral.advertisement !== 1) {
+            sbrickUuids.push(peripheral.uuid);
+        //}
+
+    });
+
+    noble.startScanning()
+
+    setTimeout(() => {
+        noble.stopScanning();
+        noble.removeAllListeners('discover');
+        callback(null, sbrickUuids);
+    }, 1000);
 };
 
 module.exports = SBrick;

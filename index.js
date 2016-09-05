@@ -14,13 +14,26 @@ app.get('/', function (req, res) {
 });
 
 io.on('connection', function (socket) {
-    socket.on('connectSBrick', function (uuid) {
+    socket.on('SBrick.scan', () => {
+        SBrick.scanSBricks((err, uuids) => {
+            console.log(uuids);
+            io.emit('SBrick.scanResults', uuids);
+        });
+    });
+
+    socket.on('SBrick.connect', (uuid) => {
         const sbrick = new SBrick(uuid);
-        sbrick.start();
+        sbrick.start((err) => {
+            if (err) {
+                return io.emit('SBrick.error', uuid, err);
+            }
+
+            io.emit('SBrick.ready', uuid);
+        });
         sbricks.uuid = sbrick;
     });
 
-    socket.on('controlSBrickChannel', function (uuid, channel, pwm) {
+    socket.on('SBrick.controlChannel', (uuid, channel, pwm) => {
         sbricks.uuid.channels[channel].pwm = pwm;
     })
 });
