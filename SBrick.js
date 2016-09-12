@@ -154,32 +154,7 @@ const scanSBricks = function (callback) {
     noble.on('discover', (peripheral) => {
         console.log('found', peripheral.advertisement.manufacturerData);
 
-        /*
-         manufacturerData: <Buffer 98 01 06 00 00 05 00 05 0c 04 01 00 34 50 07 02 de 42 5d f3 7b 98 02 03 00>,
-98 01
-06:
-00 00 sbrick
-05 00 5.0
-05 0c 5.12
-04:
-01
-00
-34
-50
-07:
-02: serial
-de
-42
-5d
-f3
-7b
-98
-02:
-03: security
-00 unsecured
-         data <Buffer 28 50 a0 57>
 
-         */
 
 
         //if (peripheral.advertisement !== 1) {
@@ -188,7 +163,7 @@ f3
 
     });
 
-    noble.startScanning()
+    noble.startScanning();
 
     setTimeout(() => {
         noble.stopScanning();
