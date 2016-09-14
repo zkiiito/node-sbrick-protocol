@@ -1,11 +1,13 @@
 const noble = require('noble');
 const SBrickChannel = require('./SBrickChannel');
+const SBrickAdvertisementData = require('./SBrickAdvertisementData');
 
 function SBrick (uuid) {
     this.uuid = uuid;
     this.connected = false;
     this.characteristic = null;
     this.runInterval = null;
+    this.blocking = false;
 
     this.channels = [
         new SBrickChannel(0),
@@ -89,7 +91,12 @@ SBrick.prototype.startScan = function (callback) {
 
 SBrick.prototype.run = function (callback) {
     this.characteristic.on('data',function (data) {
-        console.log('data', data);
+        if (!this.blocking) {
+            //console.log('data', data, data.readInt16LE(0), data.readInt16LE(2));
+            console.log('voltage', data.readInt16LE(0) * 0.83875 / 2047.0);
+            console.log('temperature', data.readInt16LE(2) / 118.85795 - 160)
+
+        }
     });
 
     this.characteristic.subscribe(function (err) {
@@ -99,10 +106,12 @@ SBrick.prototype.run = function (callback) {
     this.readCommand("0a");
 
     this.runInterval = setInterval(() => {
-        this.channels.forEach((channel) => {
-            var b = channel.getCommand();
-            this.writeCommand(b);
-        });
+        if (!this.blocking) {
+            this.channels.forEach((channel) => {
+                var b = channel.getCommand();
+                this.writeCommand(b);
+            });
+        }
     }, 200);
 
     callback(null);
@@ -121,18 +130,28 @@ SBrick.prototype.writeCommand = function (cmd) {
 };
 
 SBrick.prototype.readCommand = function (cmd, callback) {
-    this.writeCommand(cmd);
-    this.characteristic.read((err, data) => {
-       if (err) {
-           console.log("read error", err, cmd);
-       } else {
-           console.log(data);
-       }
+    callback = callback || () => {};
 
-        if (callback) {
-            callback(null, data);
-        }
-    });
+    if (!this.blocking) {
+        this.writeCommand(cmd);
+
+        this.blocking = true;
+
+        this.characteristic.read((err, data) => {
+            if (err) {
+                console.log("read error", err, cmd);
+            } else {
+                console.log(data);
+            }
+
+            this.blocking = false;
+
+            callback(err, data);
+        });
+    } else {
+        console.log('other read in progress');
+        callback('other read in progress');
+    }
 };
 
 
@@ -152,15 +171,14 @@ SBrick.scanSBricks = function (callback) {
 const scanSBricks = function (callback) {
     var sbrickUuids = [];
     noble.on('discover', (peripheral) => {
-        console.log('found', peripheral.advertisement.manufacturerData);
 
-
-
-
-        //if (peripheral.advertisement !== 1) {
+        try {
+            SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
+            console.log(peripheral.uuid, 'SBrick');
             sbrickUuids.push(peripheral.uuid);
-        //}
-
+        } catch (err) {
+            console.log(peripheral.uuid, err);
+        }
     });
 
     noble.startScanning();

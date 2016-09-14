@@ -13,8 +13,8 @@ Use the arrow keys to control your creation.
 <script>
     var SBrickChannelSettings = function (channelId) {
         this.channelId = channelId;
-        this.min = -240;
-        this.max = 240;
+        this.min = -255;
+        this.max = 255;
         this.keyInc = null;
         this.keyDec = null;
     };
@@ -35,6 +35,7 @@ Use the arrow keys to control your creation.
     socket.emit('SBrick.scan');
     socket.on('SBrick.scanResults', (uuids) => {
         console.log(uuids);
+        document.getElementById('uuid').value = uuids[0];
     });
 
     socket.on('SBrick.error', (uuid, err) => {
@@ -44,7 +45,6 @@ Use the arrow keys to control your creation.
     socket.on('SBrick.ready', (uuid) => {
         sbricks.push(new SBrickSettings(uuid));
     });
-
 
 
 
@@ -73,22 +73,22 @@ Use the arrow keys to control your creation.
 
             //up
             if (e === 38) {
-                socket.emit('SBrick.controlChannel', uuid, 1, 240);
+                socket.emit('SBrick.controlChannel', uuid, 1, 255);
             }
 
             //down
             if (e === 40) {
-                socket.emit('SBrick.controlChannel', uuid, 1, -240);
+                socket.emit('SBrick.controlChannel', uuid, 1, -255);
             }
 
             //left
             if (e === 37) {
-                socket.emit('SBrick.controlChannel', uuid, 2, 240);
+                socket.emit('SBrick.controlChannel', uuid, 2, 255);
             }
 
             //right
             if (e === 39) {
-                socket.emit('SBrick.controlChannel', uuid, 2, -240);
+                socket.emit('SBrick.controlChannel', uuid, 2, -255);
             }
         };
 

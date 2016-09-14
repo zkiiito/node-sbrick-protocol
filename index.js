@@ -16,7 +16,6 @@ app.get('/', function (req, res) {
 io.on('connection', function (socket) {
     socket.on('SBrick.scan', () => {
         SBrick.scanSBricks((err, uuids) => {
-            console.log(uuids);
             io.emit('SBrick.scanResults', uuids);
         });
     });

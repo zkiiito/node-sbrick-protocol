@@ -29,7 +29,6 @@ SBrickAdvertisementData.parse = function (data) {
     }
 
     handleSection['s' + curSection](advertisementData, section);
-    console.log(advertisementData);
 
     return advertisementData;
 };
