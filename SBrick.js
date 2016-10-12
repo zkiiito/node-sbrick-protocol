@@ -167,13 +167,13 @@ SBrick.scanSBricks = function (callback) {
 };
 
 const scanSBricks = function (callback) {
-    var sbrickUuids = [];
+    var sbricks = [];
     noble.on('discover', (peripheral) => {
 
         try {
-            SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
-            winston.info(peripheral.uuid, 'SBrick');
-            sbrickUuids.push(peripheral.uuid);
+            var sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
+            winston.info('SBrick', sbrickdata);
+            sbricks.push(sbrickdata);
         } catch (err) {
             winston.info(peripheral.uuid, err);
         }
@@ -184,7 +184,7 @@ const scanSBricks = function (callback) {
     setTimeout(() => {
         noble.stopScanning();
         noble.removeAllListeners('discover');
-        callback(null, sbrickUuids);
+        callback(null, sbricks);
     }, 1000);
 };
 

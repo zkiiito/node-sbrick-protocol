@@ -1,8 +1,7 @@
 var SBrickAdvertisementData = function () {
-    this.isSBrick = false;
     this.hwVersion = null;
     this.swVersion = null;
-    this.isSecured = false;
+    this.secured = false;
     this.identifier = null;
 };
 
@@ -47,7 +46,6 @@ const handleSection = {
             throw new Error('not SBrick');
         }
 
-        data.isSBrick = true;
         if (bytes.length > 2) {
             data.hwVersion = parseFloat(bytes[2] + '.' + bytes[3]);
         }
@@ -81,7 +79,7 @@ const handleSection = {
     //Simple Security status
     s5: function (data, bytes) {
         if (bytes[0] === 3) {
-            data.isSecured = bytes[1] === 1;
+            data.secured = bytes[1] === 1;
         } else {
             throw new Error('not SBrick');
         }

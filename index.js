@@ -1,22 +1,21 @@
 const SBrick = require('./SBrick');
 const sbricks = {};
 
-var app = require('express')();
-var server = require('http').Server(app);
-var io = require('socket.io')(server);
+const express = require('express');
+const app = express();
+const server = require('http').Server(app);
+const io = require('socket.io')(server);
 
 server.listen(8000);
 
 console.log('Open your browser at http://localhost:8000');
 
-app.get('/', function (req, res) {
-    res.sendFile(__dirname + '/index.html');
-});
+app.use(express.static(__dirname + '/public'));
 
 io.on('connection', function (socket) {
     socket.on('SBrick.scan', () => {
-        SBrick.scanSBricks((err, uuids) => {
-            io.emit('SBrick.scanResults', uuids);
+        SBrick.scanSBricks((err, sbricks) => {
+            io.emit('SBrick.scanResponse', sbricks);
         });
     });
 
@@ -27,7 +26,7 @@ io.on('connection', function (socket) {
                 return io.emit('SBrick.error', uuid, err);
             }
 
-            io.emit('SBrick.ready', uuid);
+            io.emit('SBrick.connected', uuid);
         });
         sbricks.uuid = sbrick;
     });
