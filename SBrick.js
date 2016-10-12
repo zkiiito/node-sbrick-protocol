@@ -1,4 +1,5 @@
 const noble = require('noble');
+const winston = require('winston');
 const SBrickChannel = require('./SBrickChannel');
 const SBrickAdvertisementData = require('./SBrickAdvertisementData');
 
@@ -44,11 +45,10 @@ SBrick.prototype.connect = function (callback) {
 };
 
 SBrick.prototype.startScan = function (callback) {
-    console.log('scanning for', this.uuid);
+    winston.info('scanning for', this.uuid);
     noble.on('discover', (peripheral) => {
-        console.log('found', peripheral.uuid);
+        winston.info('found', peripheral.uuid);
         if (peripheral.uuid === this.uuid) {
-            console.log('done');
             noble.stopScanning();
 
             peripheral.connect((err) => {
@@ -57,26 +57,26 @@ SBrick.prototype.startScan = function (callback) {
                 }
 
                 this.connected = true;
-                console.log('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
+                winston.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
 
                 peripheral.once('disconnect', () => {
                     clearInterval(this.runInterval);
                     this.connected = false;
-                    console.log('disconnect peripheral', this.uuid);
-                    console.log('reconnecting');
+                    winston.warn('disconnect peripheral', this.uuid);
+                    winston.info('reconnecting');
                     this.connect();
                 });
 
                 peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
                     if (err) {
-                        console.log("service discovery error", err);
+                        winston.warn("service discovery error", err);
                         return callback(err);
                     }
 
-                    console.log('remote control service found');
+                    winston.info('remote control service found');
 
                     services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
-                        console.log('remote control characteristic found');
+                        winston.info('remote control characteristic found');
                         this.characteristic = characteristics[0];
                         return callback(null);
                     });
@@ -92,15 +92,13 @@ SBrick.prototype.startScan = function (callback) {
 SBrick.prototype.run = function (callback) {
     this.characteristic.on('data',function (data) {
         if (!this.blocking) {
-            //console.log('data', data, data.readInt16LE(0), data.readInt16LE(2));
-            console.log('voltage', data.readInt16LE(0) * 0.83875 / 2047.0);
-            console.log('temperature', data.readInt16LE(2) / 118.85795 - 160)
-
+            winston.info('voltage', data.readInt16LE(0) * 0.83875 / 2047.0);
+            winston.info('temperature', data.readInt16LE(2) / 118.85795 - 160)
         }
     });
 
     this.characteristic.subscribe(function (err) {
-        console.log('subscriptbe1', err);
+        winston.warn('subscribe error', err);
     });
 
     this.readCommand("0a");
@@ -124,7 +122,7 @@ SBrick.prototype.writeCommand = function (cmd) {
 
     this.characteristic.write(cmd, false, (err) => {
         if (err) {
-            console.log("write error", err, cmd);
+            winston.warn("write error", err, cmd);
         }
     });
 };
@@ -139,7 +137,7 @@ SBrick.prototype.readCommand = function (cmd, callback) {
 
         this.characteristic.read((err, data) => {
             if (err) {
-                console.log("read error", err, cmd);
+                winston.warn("read error", err, cmd);
             } else {
                 console.log(data);
             }
@@ -149,7 +147,7 @@ SBrick.prototype.readCommand = function (cmd, callback) {
             callback(err, data);
         });
     } else {
-        console.log('other read in progress');
+        winston.info('other read in progress');
         callback('other read in progress');
     }
 };
@@ -174,10 +172,10 @@ const scanSBricks = function (callback) {
 
         try {
             SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
-            console.log(peripheral.uuid, 'SBrick');
+            winston.info(peripheral.uuid, 'SBrick');
             sbrickUuids.push(peripheral.uuid);
         } catch (err) {
-            console.log(peripheral.uuid, err);
+            winston.info(peripheral.uuid, err);
         }
     });
 
