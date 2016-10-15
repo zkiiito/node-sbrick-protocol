@@ -12,6 +12,18 @@ var SBrickControllerView = Backbone.View.extend({
             el: this.$('#sbrick-list-list'),
             model: this.model
         });
+
+        this.listenTo(this.model, 'add', this.addSBrickView);
+        this.listenTo(this.model, 'remove', this.removeSBrickView);
+    },
+
+    addSBrickView: function (sbrick) {
+        var sbrickView = new SBrickView({model: sbrick});
+        sbrickView.render().$el.appendTo(this.$el);
+    },
+
+    removeSBrickView: function (sbrick) {
+        this.$('#sbrick-control-panel-' + sbrick.get('uuid')).remove();
     },
 
     keydown: function (event) {
@@ -19,12 +31,12 @@ var SBrickControllerView = Backbone.View.extend({
 
         this.model.forEach((sbrick) => {
             sbrick.channels.forEach((channel) => {
-                if (channel.keyDec === keycode) {
-                    socket.emit('SBrick.controlChannel', sbrick.uuid, channel.channelId, channel.min);
+                if (channel.get('keyDec') === keycode) {
+                    socket.emit('SBrick.controlChannel', sbrick.get('uuid'), channel.get('channelId'), channel.get('min'));
                 }
 
-                if (channel.keyInc === keycode) {
-                    socket.emit('SBrick.controlChannel', sbrick.uuid, channel.channelId, channel.max);
+                if (channel.get('keyInc') === keycode) {
+                    socket.emit('SBrick.controlChannel', sbrick.get('uuid'), channel.get('channelId'), channel.get('max'));
                 }
             });
         });
@@ -56,8 +68,8 @@ var SBrickControllerView = Backbone.View.extend({
 
         this.model.forEach((sbrick) => {
             sbrick.channels.forEach((channel) => {
-                if (channel.keyDec === keycode || channel.keyInc === keycode) {
-                    socket.emit('SBrick.controlChannel', sbrick.uuid, channel.channelId, 0);
+                if (channel.get('keyDec') === keycode || channel.get('keyInc') === keycode) {
+                    socket.emit('SBrick.controlChannel', sbrick.get('uuid'), channel.get('channelId'), 0);
                 }
             });
         });

@@ -1,6 +1,7 @@
 SBrickChannel = Backbone.Model.extend(
     /** @lends SBrickChannel.prototype */
     {
+        idAttribute: "channelId",
         defaults: {
             channelId: null,
             min: -255,
