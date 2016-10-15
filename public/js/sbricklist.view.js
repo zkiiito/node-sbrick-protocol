@@ -1,8 +1,8 @@
 var SBrickListView = Backbone.View.extend({
     initialize: function () {
-        this.listenTo(this.sbricks, 'change:connected', this.changeConnected);
-        this.listenTo(this.sbricks, 'add', this.addSBrick);
-        this.listenTo(this.sbricks, 'remove', this.removeSBrick);
+        this.listenTo(this.model, 'change:connected', this.changeConnected);
+        this.listenTo(this.model, 'add', this.addSBrick);
+        this.listenTo(this.model, 'remove', this.removeSBrick);
     },
 
     findOptionByUUID: function (uuid) {
@@ -23,7 +23,7 @@ var SBrickListView = Backbone.View.extend({
     addSBrick: function (sbrick) {
         var uuid = sbrick.get('uuid');
         if (this.findOptionByUUID(uuid).length === 0) {
-            $('<option>').id('sbrick-list-item-' + uuid).appendTo(this.$el);
+            $('<option>').attr('id', 'sbrick-list-item-' + uuid).text(uuid).val(uuid).appendTo(this.$el);
             this.changeConnected(sbrick);
         }
     },

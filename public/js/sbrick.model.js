@@ -1,9 +1,9 @@
-/*global app, Communicator */
 var SBrickChannel, SBrickChannelCollection;
 
 SBrick = Backbone.Model.extend(
     /** @lends SBrick.prototype */
     {
+        idAttribute: "uuid",
         defaults: {
             uuid: null,
             swVersion: null,
@@ -18,10 +18,6 @@ SBrick = Backbone.Model.extend(
             this.channels.add(new SBrickChannel({channelId: 1}));
             this.channels.add(new SBrickChannel({channelId: 2}));
             this.channels.add(new SBrickChannel({channelId: 3}));
-        },
-
-        connect: function () {
-            Socket.connect(this.get('uuid'));
         }
     }
 );

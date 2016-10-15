@@ -1,4 +1,5 @@
 var SBrickAdvertisementData = function () {
+    this.uuid = null;
     this.hwVersion = null;
     this.swVersion = null;
     this.secured = false;

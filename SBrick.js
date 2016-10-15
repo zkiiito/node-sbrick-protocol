@@ -172,6 +172,7 @@ const scanSBricks = function (callback) {
 
         try {
             var sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
+            sbrickdata.uuid = peripheral.uuid;
             winston.info('SBrick', sbrickdata);
             sbricks.push(sbrickdata);
         } catch (err) {

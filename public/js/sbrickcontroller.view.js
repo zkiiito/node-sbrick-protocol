@@ -7,17 +7,17 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     initialize: function () {
-        this.listview = new SBrickListView({el: this.$el.find('#sbrick-list-list')});
+        this.model = new SBrickCollection();
+        this.listview = new SBrickListView({
+            el: this.$('#sbrick-list-list'),
+            model: this.model
+        });
     },
-/*
-    render: function () {
-        return this;
-    },
-*/
+
     keydown: function (event) {
         var keycode = event.which;
 
-        sbricks.forEach((sbrick) => {
+        this.model.forEach((sbrick) => {
             sbrick.channels.forEach((channel) => {
                 if (channel.keyDec === keycode) {
                     socket.emit('SBrick.controlChannel', sbrick.uuid, channel.channelId, channel.min);
@@ -28,7 +28,7 @@ var SBrickControllerView = Backbone.View.extend({
                 }
             });
         });
-
+/*
         //up
         if (keycode === 38) {
             socket.emit('SBrick.controlChannel', uuid, 1, 255);
@@ -48,19 +48,20 @@ var SBrickControllerView = Backbone.View.extend({
         if (keycode === 39) {
             socket.emit('SBrick.controlChannel', uuid, 2, -255);
         }
+        */
     },
 
     keyup: function (event) {
         var keycode = event.which;
 
-        sbricks.forEach((sbrick) => {
+        this.model.forEach((sbrick) => {
             sbrick.channels.forEach((channel) => {
                 if (channel.keyDec === keycode || channel.keyInc === keycode) {
                     socket.emit('SBrick.controlChannel', sbrick.uuid, channel.channelId, 0);
                 }
             });
         });
-
+/*
         //up
         if (keycode === 38) {
             socket.emit('SBrick.controlChannel', uuid, 1, 0);
@@ -80,22 +81,22 @@ var SBrickControllerView = Backbone.View.extend({
         if (keycode === 39) {
             socket.emit('SBrick.controlChannel', uuid, 2, 0);
         }
+        */
     },
 
     scan: function () {
-        this.$el.find('#sbrick-list-connect').attr('disabled', 'disabled');
-        this.$el.find('#sbrick-list-scan').attr('disabled', 'disabled');
+        this.$('#sbrick-list-connect').attr('disabled', 'disabled');
+        this.$('#sbrick-list-scan').attr('disabled', 'disabled');
         Socket.scan();
     },
 
-    scanReady: function (sbricks) {
-        this.$el.find('#sbrick-list-scan').removeAttr('disabled');
+    scanResponse: function (sbricks) {
+        this.$('#sbrick-list-scan').removeAttr('disabled');
+        this.model.set(sbricks);
         if (sbricks.length > 0) {
-            this.$el.find('#sbrick-list-connect').removeAttr('disabled');
-            //
-            //on add to model
-            //new view ami egy option, annak vannak allapotai aztan kesz
-            //disable connected sbrick uuids
+            this.$('#sbrick-list-connect').removeAttr('disabled');
+        } else {
+            this.$('#sbrick-list-connect').attr('disabled', 'disabled');
         }
     },
 
@@ -104,15 +105,16 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     connect: function () {
-        //get selected uuid
-        //disable button
+        var uuid = this.$('#sbrick-list-list').val();
         //load data if exist to tmp place? to fill in password
-        Socket.connect(uuid);
+        if (uuid) {
+            this.$('#sbrick-list-connect').attr('disabled', 'disabled');
+            Socket.connect(uuid);
+        }
     },
 
     connected: function (uuid) {
-        //disable uuid in list
-        this.$el.find('#sbrick-list-connect').removeAttr('disabled');
-        this.sbricks.add(new SBrick({uuid: uuid}));
+        this.$('#sbrick-list-connect').removeAttr('disabled');
+        this.model.get(uuid).set('connected', true);
     }
 });

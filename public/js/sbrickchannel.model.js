@@ -1,5 +1,3 @@
-/*global app, Communicator */
-
 SBrickChannel = Backbone.Model.extend(
     /** @lends SBrickChannel.prototype */
     {
