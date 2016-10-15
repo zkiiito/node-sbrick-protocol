@@ -32,8 +32,8 @@
     <span class="sbrick-control-panel-channel sbrick-control-panel-channel-<%- channelId %>">
         <label class="sbrick-control-panel-keys">
             <span>channel<%- channelId %> keys: </span>
-            <input type="text" readonly="readonly" value="LEFT">
-            <input type="text" readonly="readonly" value="RIGHT">
+            <input type="text" readonly="readonly" class="sbrick-control-panel-channel-keydec" value="<%- keyDecName %>">
+            <input type="text" readonly="readonly" class="sbrick-control-panel-channel-keyinc" value="<%- keyIncName %>">
         </label><br>
         <label class="sbrick-control-panel-values">
             <span>channel<%- channelId %> values: </span>
@@ -56,6 +56,7 @@
 <script src="js/sbrickcontroller.view.js"></script>
 <script src="js/socket.js"></script>
 <script src="js/socket-mock.js"></script>
+<script src="js/keycode.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

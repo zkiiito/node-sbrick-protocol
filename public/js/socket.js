@@ -24,6 +24,10 @@ var Socket = {
         app.connected(uuid);
     },
 
+    controlChannel: function (uuid, channelId, pwd) {
+        this.socket.emit('SBrick.controlChannel', uuid, channelId, pwd);
+    },
+
     error: function (uuid, err) {
         app.error(uuid, err);
     }

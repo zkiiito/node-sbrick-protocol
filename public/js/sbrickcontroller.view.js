@@ -23,7 +23,7 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     removeSBrickView: function (sbrick) {
-        this.$('#sbrick-control-panel-' + sbrick.get('uuid')).remove();
+        this.$('#sbrick-control-panel-' + sbrick.get('uuid')).destroy();
     },
 
     keydown: function (event) {
@@ -32,35 +32,14 @@ var SBrickControllerView = Backbone.View.extend({
         this.model.forEach((sbrick) => {
             sbrick.channels.forEach((channel) => {
                 if (channel.get('keyDec') === keycode) {
-                    socket.emit('SBrick.controlChannel', sbrick.get('uuid'), channel.get('channelId'), channel.get('min'));
+                    Socket.controlChannel(sbrick.get('uuid'), channel.get('channelId'), channel.get('min'));
                 }
 
                 if (channel.get('keyInc') === keycode) {
-                    socket.emit('SBrick.controlChannel', sbrick.get('uuid'), channel.get('channelId'), channel.get('max'));
+                    Socket.controlChannel(sbrick.get('uuid'), channel.get('channelId'), channel.get('max'));
                 }
             });
         });
-/*
-        //up
-        if (keycode === 38) {
-            socket.emit('SBrick.controlChannel', uuid, 1, 255);
-        }
-
-        //down
-        if (keycode === 40) {
-            socket.emit('SBrick.controlChannel', uuid, 1, -255);
-        }
-
-        //left
-        if (keycode === 37) {
-            socket.emit('SBrick.controlChannel', uuid, 2, 255);
-        }
-
-        //right
-        if (keycode === 39) {
-            socket.emit('SBrick.controlChannel', uuid, 2, -255);
-        }
-        */
     },
 
     keyup: function (event) {
@@ -69,31 +48,10 @@ var SBrickControllerView = Backbone.View.extend({
         this.model.forEach((sbrick) => {
             sbrick.channels.forEach((channel) => {
                 if (channel.get('keyDec') === keycode || channel.get('keyInc') === keycode) {
-                    socket.emit('SBrick.controlChannel', sbrick.get('uuid'), channel.get('channelId'), 0);
+                    Socket.controlChannel(sbrick.get('uuid'), channel.get('channelId'), 0);
                 }
             });
         });
-/*
-        //up
-        if (keycode === 38) {
-            socket.emit('SBrick.controlChannel', uuid, 1, 0);
-        }
-
-        //down
-        if (keycode === 40) {
-            socket.emit('SBrick.controlChannel', uuid, 1, 0);
-        }
-
-        //left
-        if (keycode === 37) {
-            socket.emit('SBrick.controlChannel', uuid, 2, 0);
-        }
-
-        //right
-        if (keycode === 39) {
-            socket.emit('SBrick.controlChannel', uuid, 2, 0);
-        }
-        */
     },
 
     scan: function () {

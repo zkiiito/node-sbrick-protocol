@@ -20,3 +20,7 @@ Socket.scan = function () {
 Socket.connect = function (uuid) {
     this.connected(uuid);
 };
+
+Socket.controlChannel = function (uuid, channelId, pwd) {
+    console.log('SBrick.controlChannel', uuid, channelId, pwd);
+};

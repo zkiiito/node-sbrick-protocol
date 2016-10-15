@@ -15,6 +15,7 @@
     "winston": "^2.2.0"
   },
   "devDependencies": {
+    "keycode": "^2.1.7",
     "mocha": "^3.0.2"
   }
 }

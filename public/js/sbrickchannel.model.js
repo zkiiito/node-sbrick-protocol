@@ -12,6 +12,13 @@ SBrickChannel = Backbone.Model.extend(
         /** @constructs */
         initialize: function () {
 
+        },
+
+        getKeyNames: function () {
+            return {
+                keyIncName: keycode(this.get('keyInc')),
+                keyDecName: keycode(this.get('keyDec'))
+            }
         }
     }
 );
