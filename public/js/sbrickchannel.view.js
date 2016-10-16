@@ -2,22 +2,22 @@ var SBrickChannelView = Backbone.View.extend({
     template: _.template($('#sbrick-channel-view').text()),
 
     events: {
-        'change input': 'updateModel',
+        'change input[type=number]': 'updateModel',
         'keydown input[type=text]': 'setKey'
     },
 
     initialize: function () {
-        this.listenTo(this.model, 'change:keyInc change:keyDec', this.render);
     },
 
     render: function () {
-        this.$el.html(this.template(_.merge(this.model.attributes, this.model.getKeyNames())));
+        this.setElement(this.template(_.merge(this.model.attributes, this.model.getKeyNames())));
         return this;
     },
 
     setKey: function (e) {
         var targetAttribute = $(e.target).hasClass('sbrick-control-panel-channel-keyinc') ? 'keyInc' : 'keyDec';
         this.model.set(targetAttribute, e.which);
+        $(e.target).val(keycode(e.which)).blur();
     },
 
     updateModel: function () {

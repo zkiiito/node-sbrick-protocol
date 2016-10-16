@@ -48,6 +48,14 @@ var SBrick = Backbone.Model.extend(
 
         addTemperature: function (time, temperature) {
             this.temperatures.append(time, temperature);
+        },
+
+        connect: function () {
+            this.trigger('connect', this);
+        },
+
+        disconnect: function () {
+            this.trigger('disconnect', this);
         }
     }
 );

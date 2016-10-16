@@ -3,45 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <title>SBrick controller</title>
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div id="sbrick-list">
-    <select id="sbrick-list-list" size="5">
-    </select>
+<button id="sbrick-list-scan" class="pure-button button-success">Scan for SBricks</button><br>
 
-    <button id="sbrick-list-scan">scan</button><br>
-    <button id="sbrick-list-connect" disabled="disabled">connect</button>
+<div id="sbricks" class="pure-g">
 </div>
 
 <script type="text/html" id="sbrick-view">
-    <div class="sbrick-control-panel" id="sbrick-control-panel-<%- uuid %>">
-        <p>
-            SBrick <%- uuid %><br>
-            <label class="sbrick-control-panel-passwords">
-                <span>password: </span>
-                <input type="password" class="sbrick-control-panel-password" value="<%- password %>">
-            </label>
-            <span class="sbrick-control-panel-channels">
-            </span>
-        </p>
+    <div class="sbrick-control-panel pure-u-1-4" id="sbrick-control-panel-<%- uuid %>">
+        <h3>SBrick <%- uuid %></h3>
+
+        <button class="pure-button pure-button-primary sbrick-control-panel-connect">connect</button>
+        <button class="pure-button pure-button-disabled button-error sbrick-control-panel-disconnect">disconnect</button>
+
+        <form class="pure-form pure-form-aligned">
+            <div class="pure-control-group sbrick-control-panel-passwords">
+                <label>password:</label>
+                <input type="password" class="sbrick-control-panel-password pure-input-1-2" value="<%- password %>">
+            </div>
+
+            <div class="sbrick-control-panel-channels">
+            </div>
+        </form>
+
         <canvas class="sbrick-control-panel-chart" width="200" height="50"></canvas>
     </div>
 </script>
 
 <script type="text/html" id="sbrick-channel-view">
-    <span class="sbrick-control-panel-channel sbrick-control-panel-channel-<%- channelId %>">
-        <label class="sbrick-control-panel-keys">
-            <span>channel<%- channelId %> keys: </span>
-            <input type="text" readonly="readonly" class="sbrick-control-panel-channel-keydec" value="<%- keyDecName %>">
-            <input type="text" readonly="readonly" class="sbrick-control-panel-channel-keyinc" value="<%- keyIncName %>">
-        </label><br>
-        <label class="sbrick-control-panel-values">
-            <span>channel<%- channelId %> values: </span>
-            <input type="number" class="sbrick-control-panel-channel-minvalue" min="-255" max="255" value="<%- min %>">
-            <input type="number" class="sbrick-control-panel-channel-maxvalue" min="-255" max="255" value="<%- max %>">
-        </label>
-    </span>
+    <div class="sbrick-control-panel-channel sbrick-control-panel-channel-<%- channelId %>">
+        <div class="pure-control-group">
+            <label>channel<%- channelId %> keys: </label>
+            <input type="text" readonly="readonly" class="sbrick-control-panel-channel-keydec pure-input-1-4" value="<%- keyDecName %>">
+            <input type="text" readonly="readonly" class="sbrick-control-panel-channel-keyinc pure-input-1-4" value="<%- keyIncName %>">
+        </div>
+        <div class="pure-control-group">
+        <label>channel<%- channelId %> values:</label>
+            <input type="number" class="sbrick-control-panel-channel-minvalue pure-input-1-4" min="-255" max="255" value="<%- min %>">
+            <input type="number" class="sbrick-control-panel-channel-maxvalue pure-input-1-4" min="-255" max="255" value="<%- max %>">
+        </div>
+    </div>
 </script>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -51,7 +56,6 @@
 <script src="//cdnjs.cloudflare.com/ajax/libs/smoothie/1.27.0/smoothie.min.js"></script>
 <script src="js/sbrickchannel.model.js"></script>
 <script src="js/sbrick.model.js"></script>
-<script src="js/sbricklist.view.js"></script>
 <script src="js/sbrickchannel.view.js"></script>
 <script src="js/sbrick.view.js"></script>
 <script src="js/sbrickcontroller.view.js"></script>

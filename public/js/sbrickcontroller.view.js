@@ -2,24 +2,20 @@ var SBrickControllerView = Backbone.View.extend({
     events: {
         "keydown": "keydown",
         "keyup": "keyup",
-        "click #sbrick-list-scan": "scan",
-        "click #sbrick-list-connect": "connect"
+        "click #sbrick-list-scan": "scan"
     },
 
     initialize: function () {
         this.model = new SBrickCollection();
-        this.listview = new SBrickListView({
-            el: this.$('#sbrick-list-list'),
-            model: this.model
-        });
 
         this.listenTo(this.model, 'add', this.addSBrickView);
         this.listenTo(this.model, 'remove', this.removeSBrickView);
+        this.listenTo(this.model, 'connect', this.connect)
     },
 
     addSBrickView: function (sbrick) {
         var sbrickView = new SBrickView({model: sbrick});
-        sbrickView.render().$el.appendTo(this.$el);
+        sbrickView.render().$el.appendTo(this.$('#sbricks'));
     },
 
     removeSBrickView: function (sbrick) {
@@ -74,13 +70,9 @@ var SBrickControllerView = Backbone.View.extend({
         console.log('error', uuid, err);
     },
 
-    connect: function () {
-        var uuid = this.$('#sbrick-list-list').val();
-        //load data if exist to tmp place? to fill in password
-        if (uuid) {
-            this.$('#sbrick-list-connect').attr('disabled', 'disabled');
-            Socket.connect(uuid);
-        }
+    connect: function (sbrick) {
+        var uuid = sbrick.get('uuid');
+        Socket.connect(uuid);
     },
 
     connected: function (uuid) {
