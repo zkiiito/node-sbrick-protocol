@@ -9,7 +9,7 @@
  * @api public
  */
 
-var keycode = function(searchInput) {
+keycode = keycode = function(searchInput) {
   // Keyboard Events
   if (searchInput && 'object' === typeof searchInput) {
     var hasKeyCode = searchInput.which || searchInput.keyCode || searchInput.charCode
@@ -39,7 +39,7 @@ var keycode = function(searchInput) {
 /**
  * Get by name
  *
- *   exports.code['enter'] // => 13
+ *   keycode.code['enter'] // => 13
  */
 
 var codes = keycode.code = keycode.codes = {
@@ -132,7 +132,7 @@ for (i = 0; i < 10; i++) codes['numpad '+i] = i + 96
 /**
  * Get by code
  *
- *   exports.name[13] // => 'Enter'
+ *   keycode.name[13] // => 'Enter'
  */
 
 var names = keycode.names = keycode.title = {} // title for backward compat

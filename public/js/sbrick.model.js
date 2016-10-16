@@ -13,9 +13,7 @@ var SBrick = Backbone.Model.extend(
         },
         /** @constructs */
         initialize: function () {
-            this.listenTo(this.channels, 'change', () => {
-                this.save();
-            });
+            this.listenTo(this.channels, 'change', this.save);
             this.voltages = new TimeSeries();
             this.temperatures = new TimeSeries();
         },

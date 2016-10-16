@@ -25,8 +25,8 @@ var SBrickControllerView = Backbone.View.extend({
     keydown: function (event) {
         var keycode = event.which;
 
-        this.model.forEach((sbrick) => {
-            sbrick.channels.forEach((channel) => {
+        this.model.forEach(function (sbrick) {
+            sbrick.channels.forEach(function (channel) {
                 if (channel.get('keyDec') === keycode) {
                     Socket.controlChannel(sbrick.get('uuid'), channel.get('channelId'), channel.get('min'));
                 }
@@ -41,8 +41,8 @@ var SBrickControllerView = Backbone.View.extend({
     keyup: function (event) {
         var keycode = event.which;
 
-        this.model.forEach((sbrick) => {
-            sbrick.channels.forEach((channel) => {
+        this.model.forEach(function (sbrick) {
+            sbrick.channels.forEach(function (channel) {
                 if (channel.get('keyDec') === keycode || channel.get('keyInc') === keycode) {
                     Socket.controlChannel(sbrick.get('uuid'), channel.get('channelId'), 0);
                 }
