@@ -20,6 +20,9 @@ Socket.scan = function () {
 
 Socket.connect = function (uuid) {
     this.connected(uuid);
+    setInterval(() => {
+        this.voltAndTemp(uuid, Math.random() * 9, Math.random() * 37);
+    }, 500);
 };
 
 Socket.controlChannel = function (uuid, channelId, pwd) {

@@ -16,6 +16,8 @@ var SBrick = Backbone.Model.extend(
             this.listenTo(this.channels, 'change', () => {
                 this.save();
             });
+            this.voltages = new TimeSeries();
+            this.temperatures = new TimeSeries();
         },
 
         toJSON: function (options) {
@@ -38,6 +40,14 @@ var SBrick = Backbone.Model.extend(
             }
 
             return _.omit(resp, 'channels');
+        },
+
+        addVoltage: function (time, voltage) {
+            this.voltages.append(time, voltage);
+        },
+
+        addTemperature: function (time, temperature) {
+            this.temperatures.append(time, temperature);
         }
     }
 );

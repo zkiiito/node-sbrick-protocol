@@ -99,8 +99,11 @@ SBrick.prototype.connect = function (callback) {
 SBrick.prototype.run = function (callback) {
     this.characteristic.on('data',function (data) {
         if (!this.blocking) {
-            this.emit('SBrick.voltage', data.readInt16LE(0) * 0.83875 / 2047.0);
-            this.emit('SBrick.temperature', data.readInt16LE(2) / 118.85795 - 160);
+            var voltage = data.readInt16LE(0) * 0.83875 / 2047.0;
+            var temperature = data.readInt16LE(2) / 118.85795 - 160;
+            this.emit('SBrick.voltage', voltage);
+            this.emit('SBrick.temperature', temperature);
+            this.emit('SBrick.voltAndTemp', voltage, temperature);
         }
     });
 

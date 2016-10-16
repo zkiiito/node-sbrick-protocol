@@ -43,6 +43,9 @@ io.on('connection', function (socket) {
             }
 
             io.emit('SBrick.connected', uuid);
+            sbrick.on('SBrick.voltAndTemp', (voltage, temperature) => {
+                io.emit('SBrick.voltAndTemp', uuid, voltage, temperature);
+            });
         });
         sbricks[uuid] = sbrick;
     });

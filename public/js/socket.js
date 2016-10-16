@@ -6,6 +6,7 @@ var Socket = {
         this.socket.on('SBrick.scanResponse', this.scanResponse);
         this.socket.on('SBrick.connected', this.connected);
         this.socket.on('SBrick.error', this.error);
+        this.socket.on('SBrick.voltAndTemp', this.voltAndTemp);
     },
 
     scan: function () {
@@ -30,5 +31,9 @@ var Socket = {
 
     error: function (uuid, err) {
         app.error(uuid, err);
+    },
+
+    voltAndTemp: function (uuid, voltage, temperature) {
+        app.voltAndTemp(uuid, voltage, temperature);
     }
 };

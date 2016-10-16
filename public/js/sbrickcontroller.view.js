@@ -86,5 +86,11 @@ var SBrickControllerView = Backbone.View.extend({
     connected: function (uuid) {
         this.$('#sbrick-list-connect').removeAttr('disabled');
         this.model.get(uuid).set('connected', true);
+    },
+
+    voltAndTemp: function (uuid, voltage, temperature) {
+        var time = new Date().getTime();
+        this.model.get(uuid).addVoltage(time, voltage);
+        this.model.get(uuid).addTemperature(time, temperature);
     }
 });

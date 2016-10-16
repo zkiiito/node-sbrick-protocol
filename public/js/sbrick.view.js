@@ -7,6 +7,8 @@ var SBrickView = Backbone.View.extend({
 
     initialize: function () {
         this.channelViews = [];
+        this.timeline = null;
+        this.listenTo(this.model, 'change:connected', this.initChart);
     },
 
     render: function () {
@@ -21,6 +23,26 @@ var SBrickView = Backbone.View.extend({
         });
 
         return this;
+    },
+
+    initChart: function () {
+        if (this.timeline === null) {
+            this.timeline = new SmoothieChart();
+
+            this.timeline.addTimeSeries(this.model.voltages, {
+                strokeStyle: 'rgba(0, 255, 0, 1)',
+                fillStyle: 'rgba(0, 255, 0, 0.2)',
+                lineWidth: 1
+            });
+
+            this.timeline.addTimeSeries(this.model.temperatures, {
+                strokeStyle: 'rgba(255, 0, 0, 1)',
+                fillStyle: 'rgba(255, 0, 0, 0.2)',
+                lineWidth: 1
+            });
+
+            this.timeline.streamTo(this.$('.sbrick-control-panel-chart')[0]);
+        }
     },
 
     updateModel: function () {
