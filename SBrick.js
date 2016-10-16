@@ -1,7 +1,24 @@
 const noble = require('noble');
 const winston = require('winston');
+const util = require('util');
+const EventEmitter = require('events').EventEmitter;
 const SBrickChannel = require('./SBrickChannel');
 const SBrickAdvertisementData = require('./SBrickAdvertisementData');
+
+const nobleConnected = function () {
+    return new Promise((resolve, reject) => {
+        if (noble.state === 'poweredOn') {
+            resolve();
+        } else {
+            noble.on('stateChange', (state) => {
+                if (state === 'poweredOn') {
+                    noble.off('stateChange');
+                    resolve();
+                }
+            });
+        }
+    });
+};
 
 function SBrick (uuid) {
     this.uuid = uuid;
@@ -18,6 +35,8 @@ function SBrick (uuid) {
     ];
 }
 
+util.inherits(SBrick, EventEmitter);
+
 SBrick.prototype.start = function (callback, startFunction) {
     this.connect((err) => {
         if (err) {
@@ -32,68 +51,56 @@ SBrick.prototype.start = function (callback, startFunction) {
 
 SBrick.prototype.connect = function (callback) {
     if (!this.connected) {
-        if (noble.state === 'poweredOn') {
-            this.startScan(callback);
-        } else {
-            noble.on('stateChange', (state) => {
-                if (state === 'poweredOn') {
-                    this.startScan(callback);
-                }
-            });
-        }
-    }
-};
+        nobleConnected().then(() => {
+            winston.info('scanning for', this.uuid);
+            noble.on('discover', (peripheral) => {
+                winston.info('found', peripheral.uuid);
+                if (peripheral.uuid === this.uuid) {
+                    noble.stopScanning();
 
-SBrick.prototype.startScan = function (callback) {
-    winston.info('scanning for', this.uuid);
-    noble.on('discover', (peripheral) => {
-        winston.info('found', peripheral.uuid);
-        if (peripheral.uuid === this.uuid) {
-            noble.stopScanning();
+                    peripheral.connect((err) => {
+                        if (err) {
+                            return callback(err);
+                        }
 
-            peripheral.connect((err) => {
-                if (err) {
-                    return callback(err);
-                }
+                        this.connected = true;
+                        winston.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
 
-                this.connected = true;
-                winston.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
+                        peripheral.once('disconnect', () => {
+                            clearInterval(this.runInterval);
+                            this.connected = false;
+                            winston.warn('disconnect peripheral', this.uuid);
+                            this.emit('SBrick.disconnected');
+                        });
 
-                peripheral.once('disconnect', () => {
-                    clearInterval(this.runInterval);
-                    this.connected = false;
-                    winston.warn('disconnect peripheral', this.uuid);
-                    winston.info('reconnecting');
-                    this.connect();
-                });
+                        peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
+                            if (err) {
+                                winston.warn("service discovery error", err);
+                                return callback(err);
+                            }
 
-                peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
-                    if (err) {
-                        winston.warn("service discovery error", err);
-                        return callback(err);
-                    }
+                            winston.info('remote control service found');
 
-                    winston.info('remote control service found');
-
-                    services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
-                        winston.info('remote control characteristic found');
-                        this.characteristic = characteristics[0];
-                        return callback(null);
+                            services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
+                                winston.info('remote control characteristic found');
+                                this.characteristic = characteristics[0];
+                                return callback(null);
+                            });
+                        });
                     });
-                });
+                }
             });
-        }
-    });
 
-
-    noble.startScanning()
+            noble.startScanning()
+        });
+    }
 };
 
 SBrick.prototype.run = function (callback) {
     this.characteristic.on('data',function (data) {
         if (!this.blocking) {
-            winston.info('voltage', data.readInt16LE(0) * 0.83875 / 2047.0);
-            winston.info('temperature', data.readInt16LE(2) / 118.85795 - 160)
+            this.emit('SBrick.voltage', data.readInt16LE(0) * 0.83875 / 2047.0);
+            this.emit('SBrick.temperature', data.readInt16LE(2) / 118.85795 - 160);
         }
     });
 
@@ -152,41 +159,29 @@ SBrick.prototype.readCommand = function (cmd, callback) {
     }
 };
 
-
 SBrick.scanSBricks = function (callback) {
-    if (noble.state === 'poweredOn') {
-        scanSBricks(callback);
-    } else {
-        noble.on('stateChange', (state) => {
-            if (state === 'poweredOn') {
-                noble.off('stateChange');
-                scanSBricks(callback);
+    nobleConnected().then(() => {
+        var sbricks = [];
+        noble.on('discover', (peripheral) => {
+
+            try {
+                var sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
+                sbrickdata.uuid = peripheral.uuid;
+                winston.info('SBrick', sbrickdata);
+                sbricks.push(sbrickdata);
+            } catch (err) {
+                winston.info(peripheral.uuid, err);
             }
         });
-    }
-};
 
-const scanSBricks = function (callback) {
-    var sbricks = [];
-    noble.on('discover', (peripheral) => {
+        noble.startScanning();
 
-        try {
-            var sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
-            sbrickdata.uuid = peripheral.uuid;
-            winston.info('SBrick', sbrickdata);
-            sbricks.push(sbrickdata);
-        } catch (err) {
-            winston.info(peripheral.uuid, err);
-        }
+        setTimeout(() => {
+            noble.stopScanning();
+            noble.removeAllListeners('discover');
+            callback(null, sbricks);
+        }, 1000);
     });
-
-    noble.startScanning();
-
-    setTimeout(() => {
-        noble.stopScanning();
-        noble.removeAllListeners('discover');
-        callback(null, sbricks);
-    }, 1000);
 };
 
 module.exports = SBrick;

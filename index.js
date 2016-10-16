@@ -44,11 +44,11 @@ io.on('connection', function (socket) {
 
             io.emit('SBrick.connected', uuid);
         });
-        sbricks.uuid = sbrick;
+        sbricks[uuid] = sbrick;
     });
 
     socket.on('SBrick.controlChannel', (uuid, channel, pwm) => {
-        sbricks.uuid.channels[channel].pwm = pwm;
+        sbricks[uuid].channels[channel].pwm = pwm;
     })
 });
 
