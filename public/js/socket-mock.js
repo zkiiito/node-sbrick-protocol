@@ -5,7 +5,8 @@ Socket.scan = function () {
             hwVersion: 4,
             swVersion: 4.2,
             secured: false,
-            identifier: null
+            identifier: null,
+            channels: JSON.parse('[{"channelId":0,"min":"-255","max":"254","keyInc":null,"keyDec":null},{"channelId":1,"min":-255,"max":255,"keyInc":null,"keyDec":null},{"channelId":2,"min":-255,"max":255,"keyInc":null,"keyDec":null},{"channelId":3,"min":-255,"max":255,"keyInc":null,"keyDec":null}]')
         },
         {
             uuid: '1xfsdfs',

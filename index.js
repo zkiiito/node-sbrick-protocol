@@ -5,17 +5,33 @@ const express = require('express');
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
+const bodyParser = require('body-parser');
+const storage = require('node-persist');
+const async = require('async');
 
-server.listen(8000);
+storage.initSync({
+    dir: __dirname + '/data'
+});
 
-console.log('Open your browser at http://localhost:8000');
-
+app.use(bodyParser.json());
 app.use(express.static(__dirname + '/public'));
+
+app.put('/sbricks/:uuid', function (req, res) {
+    storage.setItem(req.params.uuid, req.body).then(() => {
+        res.sendStatus(200);
+    });
+});
 
 io.on('connection', function (socket) {
     socket.on('SBrick.scan', () => {
         SBrick.scanSBricks((err, sbricks) => {
-            io.emit('SBrick.scanResponse', sbricks);
+            async.map(sbricks, (sbrick, callback) => {
+                storage.getItem(sbrick.uuid).then((value) => {
+                    callback(null, Object.assign({}, value, sbrick));
+                })
+            }, (err, results) => {
+                io.emit('SBrick.scanResponse', results);
+            });
         });
     });
 
@@ -35,3 +51,6 @@ io.on('connection', function (socket) {
         sbricks.uuid.channels[channel].pwm = pwm;
     })
 });
+
+server.listen(8000);
+console.log('Open your browser at http://localhost:8000');

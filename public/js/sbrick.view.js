@@ -1,6 +1,10 @@
 var SBrickView = Backbone.View.extend({
     template: _.template($('#sbrick-view').text()),
 
+    events: {
+        "blur .sbrick-control-panel-password": "updateModel"
+    },
+
     initialize: function () {
         this.channelViews = [];
     },
@@ -17,6 +21,10 @@ var SBrickView = Backbone.View.extend({
         });
 
         return this;
+    },
+
+    updateModel: function () {
+        this.model.set('password', this.$('.sbrick-control-panel-password').val());
     },
 
     destroy: function () {

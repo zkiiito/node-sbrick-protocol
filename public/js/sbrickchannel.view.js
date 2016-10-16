@@ -7,7 +7,7 @@ var SBrickChannelView = Backbone.View.extend({
     },
 
     initialize: function () {
-        this.listenTo(this.model, 'change', this.render);
+        this.listenTo(this.model, 'change:keyInc change:keyDec', this.render);
     },
 
     render: function () {
@@ -24,7 +24,7 @@ var SBrickChannelView = Backbone.View.extend({
         this.model.set({
             'min': this.$('.sbrick-control-panel-channel-minvalue').val(),
             'max': this.$('.sbrick-control-panel-channel-maxvalue').val()
-        }, {silent: true});
+        });
     },
 
     destroy: function () {

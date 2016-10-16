@@ -62,7 +62,7 @@ var SBrickControllerView = Backbone.View.extend({
 
     scanResponse: function (sbricks) {
         this.$('#sbrick-list-scan').removeAttr('disabled');
-        this.model.set(sbricks);
+        this.model.set(sbricks, {parse: true});
         if (sbricks.length > 0) {
             this.$('#sbrick-list-connect').removeAttr('disabled');
         } else {

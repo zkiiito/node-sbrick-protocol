@@ -18,9 +18,9 @@
     <div class="sbrick-control-panel" id="sbrick-control-panel-<%- uuid %>">
         <p>
             SBrick <%- uuid %><br>
-            <label class="sbrick-control-panel-password">
+            <label class="sbrick-control-panel-passwords">
                 <span>password: </span>
-                <input type="password">
+                <input type="password" class="sbrick-control-panel-password" value="<%- password %>">
             </label>
             <span class="sbrick-control-panel-channels">
             </span>
@@ -37,8 +37,8 @@
         </label><br>
         <label class="sbrick-control-panel-values">
             <span>channel<%- channelId %> values: </span>
-            <input type="number" class="minvalue" min="-255" max="255" value="<%- min %>">
-            <input type="number" class="maxvalue" min="-255" max="255" value="<%- max %>">
+            <input type="number" class="sbrick-control-panel-channel-minvalue" min="-255" max="255" value="<%- min %>">
+            <input type="number" class="sbrick-control-panel-channel-maxvalue" min="-255" max="255" value="<%- max %>">
         </label>
     </span>
 </script>
