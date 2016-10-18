@@ -176,6 +176,36 @@ SBrick.prototype.readCommand = function (cmd, callback) {
     }
 };
 
+SBrick.prototype.needAuthentication = function (callback) {
+    this.readCommand("02", function (err, data) {
+        return callback(err, data.readUInt8() === 1);
+    });
+};
+
+SBrick.prototype.isAuthenticated = function (callback) {
+    this.readCommand("03", function (err, data) {
+        return callback(err, data.readUInt8() === 1);
+    });
+};
+
+SBrick.prototype.getUserId = function (callback) {
+    this.readCommand("04", function (err, data) {
+        return callback(err, data.readUInt8());
+    });
+};
+
+SBrick.prototype.getBrickID = function (callback) {
+    this.readCommand("0A", function (err, data) {
+        return callback(err, data.readUInt8());
+    });
+};
+
+SBrick.prototype.getWatchdogTimeout = function (callback) {
+    this.readCommand("0E", function (err, data) {
+        return callback(err, data.readUInt8());
+    });
+};
+
 SBrick.scanSBricks = function (callback) {
     winston.info('scanning...');
     nobleConnected().then(() => {
