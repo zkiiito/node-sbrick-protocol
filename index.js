@@ -1,6 +1,4 @@
 const SBrick = require('./SBrick');
-const sbricks = {};
-
 const express = require('express');
 const app = express();
 const server = require('http').Server(app);
@@ -23,7 +21,13 @@ app.put('/sbricks/:uuid', function (req, res) {
 });
 
 io.on('connection', function (socket) {
+    socket.sbricks = {};
+
     socket.on('SBrick.scan', () => {
+        Object.keys(socket.sbricks).forEach((uuid) => {
+            socket.sbricks[uuid].disconnect();
+        });
+
         SBrick.scanSBricks((err, sbricks) => {
             async.map(sbricks, (sbrick, callback) => {
                 storage.getItem(sbrick.uuid).then((value) => {
@@ -46,13 +50,30 @@ io.on('connection', function (socket) {
             sbrick.on('SBrick.voltAndTemp', (voltage, temperature) => {
                 io.emit('SBrick.voltAndTemp', uuid, voltage, temperature);
             });
+            sbrick.on('SBrick.disconnected', () => {
+                io.emit('SBrick.disconnected', uuid);
+            });
         });
-        sbricks[uuid] = sbrick;
+        socket.sbricks[uuid] = sbrick;
     });
 
     socket.on('SBrick.controlChannel', (uuid, channel, pwm) => {
-        sbricks[uuid].channels[channel].pwm = pwm;
-    })
+        if (socket.sbricks.hasOwnProperty(uuid)) {
+            socket.sbricks[uuid].channels[channel].pwm = pwm;
+        }
+    });
+
+    socket.on('SBrick.disconnect', (uuid) => {
+        if (socket.sbricks.hasOwnProperty(uuid)) {
+            socket.sbricks[uuid].disconnect();
+        }
+    });
+
+    socket.on('disconnect', () => {
+        Object.keys(socket.sbricks).forEach((uuid) => {
+            socket.sbricks[uuid].disconnect();
+        });
+    });
 });
 
 server.listen(8000);

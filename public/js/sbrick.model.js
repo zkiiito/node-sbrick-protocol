@@ -13,14 +13,20 @@ var SBrick = Backbone.Model.extend(
         },
         /** @constructs */
         initialize: function () {
-            this.listenTo(this.channels, 'change', this.save);
+            this.listenTo(this.channels, 'change', function () {
+                this.save(); //save gets the channel object, we have to save the sbrick object
+            });
             this.voltages = new TimeSeries();
             this.temperatures = new TimeSeries();
+            this.set('connected', false);
         },
 
         toJSON: function (options) {
-            var json = _.clone(this.attributes);
-            json.channels = this.channels.toJSON(options);
+            var json = {
+                uuid: this.get('uuid'),
+                password: this.get('password'),
+                channels: this.channels.toJSON(options)
+            };
             return json;
         },
 
@@ -49,11 +55,15 @@ var SBrick = Backbone.Model.extend(
         },
 
         connect: function () {
-            this.trigger('connect', this);
+            if (!this.get('connected')) {
+                this.trigger('connect', this);
+            }
         },
 
         disconnect: function () {
-            this.trigger('disconnect', this);
+            if (this.get('connected')) {
+                this.trigger('disconnect', this);
+            }
         }
     }
 );

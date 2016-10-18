@@ -10,7 +10,8 @@ var SBrickControllerView = Backbone.View.extend({
 
         this.listenTo(this.model, 'add', this.addSBrickView);
         this.listenTo(this.model, 'remove', this.removeSBrickView);
-        this.listenTo(this.model, 'connect', this.connect)
+        this.listenTo(this.model, 'connect', this.connect);
+        this.listenTo(this.model, 'disconnect', this.disconnect);
     },
 
     addSBrickView: function (sbrick) {
@@ -25,7 +26,7 @@ var SBrickControllerView = Backbone.View.extend({
     keydown: function (event) {
         var keycode = event.which;
 
-        this.model.forEach(function (sbrick) {
+        this.model.where({connected: true}).forEach(function (sbrick) {
             sbrick.channels.forEach(function (channel) {
                 if (channel.get('keyDec') === keycode) {
                     Socket.controlChannel(sbrick.get('uuid'), channel.get('channelId'), channel.get('min'));
@@ -41,7 +42,7 @@ var SBrickControllerView = Backbone.View.extend({
     keyup: function (event) {
         var keycode = event.which;
 
-        this.model.forEach(function (sbrick) {
+        this.model.where({connected: true}).forEach(function (sbrick) {
             sbrick.channels.forEach(function (channel) {
                 if (channel.get('keyDec') === keycode || channel.get('keyInc') === keycode) {
                     Socket.controlChannel(sbrick.get('uuid'), channel.get('channelId'), 0);
@@ -51,7 +52,6 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     scan: function () {
-        this.$('#sbrick-list-connect').attr('disabled', 'disabled');
         this.$('#sbrick-list-scan').attr('disabled', 'disabled');
         Socket.scan();
     },
@@ -59,11 +59,6 @@ var SBrickControllerView = Backbone.View.extend({
     scanResponse: function (sbricks) {
         this.$('#sbrick-list-scan').removeAttr('disabled');
         this.model.set(sbricks, {parse: true});
-        if (sbricks.length > 0) {
-            this.$('#sbrick-list-connect').removeAttr('disabled');
-        } else {
-            this.$('#sbrick-list-connect').attr('disabled', 'disabled');
-        }
     },
 
     error: function (uuid, err) {
@@ -76,8 +71,16 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     connected: function (uuid) {
-        this.$('#sbrick-list-connect').removeAttr('disabled');
         this.model.get(uuid).set('connected', true);
+    },
+
+    disconnect: function (sbrick) {
+        var uuid = sbrick.get('uuid');
+        Socket.disconnect(uuid);
+    },
+
+    disconnected: function (uuid) {
+        this.model.get(uuid).set('connected', false);
     },
 
     voltAndTemp: function (uuid, voltage, temperature) {

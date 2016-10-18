@@ -12,7 +12,7 @@ const nobleConnected = function () {
         } else {
             noble.on('stateChange', (state) => {
                 if (state === 'poweredOn') {
-                    noble.off('stateChange');
+                    noble.removeAllListeners('stateChange');
                     resolve();
                 }
             });
@@ -26,6 +26,7 @@ function SBrick (uuid) {
     this.characteristic = null;
     this.runInterval = null;
     this.blocking = false;
+    this.peripheral = null;
 
     this.channels = [
         new SBrickChannel(0),
@@ -51,12 +52,15 @@ SBrick.prototype.start = function (callback, startFunction) {
 
 SBrick.prototype.connect = function (callback) {
     if (!this.connected) {
+        var found = false; //somehow discover discovered the same sbrick multiple times
         nobleConnected().then(() => {
             winston.info('scanning for', this.uuid);
             noble.on('discover', (peripheral) => {
                 winston.info('found', peripheral.uuid);
-                if (peripheral.uuid === this.uuid) {
+                if (!found && peripheral.uuid === this.uuid) {
+                    found = true;
                     noble.stopScanning();
+                    this.peripheral = peripheral;
 
                     peripheral.connect((err) => {
                         if (err) {
@@ -96,8 +100,15 @@ SBrick.prototype.connect = function (callback) {
     }
 };
 
+SBrick.prototype.disconnect = function () {
+    this.removeAllListeners();
+    if (this.peripheral) {
+        this.peripheral.disconnect();
+    }
+};
+
 SBrick.prototype.run = function (callback) {
-    this.characteristic.on('data',function (data) {
+    this.characteristic.on('data', (data) => {
         if (!this.blocking) {
             var voltage = data.readInt16LE(0) * 0.83875 / 2047.0;
             var temperature = data.readInt16LE(2) / 118.85795 - 160;
@@ -107,14 +118,14 @@ SBrick.prototype.run = function (callback) {
         }
     });
 
-    this.characteristic.subscribe(function (err) {
-        winston.warn('subscribe error', err);
+    this.characteristic.subscribe((err) => {
+        if (err) {
+            winston.warn('subscribe error', err);
+        }
     });
 
-    this.readCommand("0a");
-
     this.runInterval = setInterval(() => {
-        if (!this.blocking) {
+        if (this.connected && !this.blocking) {
             this.channels.forEach((channel) => {
                 var b = channel.getCommand();
                 this.writeCommand(b);
@@ -163,6 +174,7 @@ SBrick.prototype.readCommand = function (cmd, callback) {
 };
 
 SBrick.scanSBricks = function (callback) {
+    winston.info('scanning...');
     nobleConnected().then(() => {
         var sbricks = [];
         noble.on('discover', (peripheral) => {

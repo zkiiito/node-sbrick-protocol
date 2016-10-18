@@ -5,6 +5,7 @@ var Socket = {
 
         this.socket.on('SBrick.scanResponse', this.scanResponse);
         this.socket.on('SBrick.connected', this.connected);
+        this.socket.on('SBrick.disconnected', this.disconnected);
         this.socket.on('SBrick.error', this.error);
         this.socket.on('SBrick.voltAndTemp', this.voltAndTemp);
     },
@@ -23,6 +24,14 @@ var Socket = {
 
     connected: function (uuid) {
         app.connected(uuid);
+    },
+
+    disconnect: function (uuid) {
+        this.socket.emit('SBrick.disconnect', uuid);
+    },
+
+    disconnected: function (uuid) {
+        app.disconnected(uuid);
     },
 
     controlChannel: function (uuid, channelId, pwd) {

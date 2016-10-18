@@ -15,6 +15,7 @@ var SBrickChannelView = Backbone.View.extend({
     },
 
     setKey: function (e) {
+        e.preventDefault();
         var targetAttribute = $(e.target).hasClass('sbrick-control-panel-channel-keyinc') ? 'keyInc' : 'keyDec';
         this.model.set(targetAttribute, e.which);
         $(e.target).val(keycode(e.which)).blur();

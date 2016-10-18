@@ -21,7 +21,7 @@ module.exports = function (grunt) {
         "public/js/sbrick.view.js",
         "public/js/sbrickcontroller.view.js",
         "public/js/socket.js",
-        "public/js/socket-mock.js",
+        //"public/js/socket-mock.js",
         "public/js/app.js"
     ];
 
@@ -63,5 +63,5 @@ module.exports = function (grunt) {
         }
     });
 
-    grunt.registerTask('default', 'concat');
+    grunt.registerTask('default', 'concat:public');
 };
