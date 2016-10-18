@@ -76,6 +76,7 @@ SBrick.prototype.connect = function (callback) {
                             this.connected = false;
                             winston.warn('disconnect peripheral', this.uuid);
                             this.emit('SBrick.disconnected');
+                            this.removeAllListeners();
                         });
 
                         peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
@@ -102,9 +103,10 @@ SBrick.prototype.connect = function (callback) {
 };
 
 SBrick.prototype.disconnect = function () {
-    this.removeAllListeners();
     if (this.peripheral) {
         this.peripheral.disconnect();
+    } else {
+        this.removeAllListeners();
     }
 };
 
