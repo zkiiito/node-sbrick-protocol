@@ -27,6 +27,7 @@ function SBrick (uuid) {
     this.runInterval = null;
     this.blocking = false;
     this.peripheral = null;
+    this.readHandler = null;
 
     this.channels = [
         new SBrickChannel(0),
@@ -108,13 +109,15 @@ SBrick.prototype.disconnect = function () {
 };
 
 SBrick.prototype.run = function (callback) {
-    this.characteristic.on('data', (data) => {
-        if (!this.blocking) {
+    this.characteristic.on('data', (data, isNotification) => {
+        if (isNotification) {
             var voltage = data.readInt16LE(0) * 0.83875 / 2047.0;
             var temperature = data.readInt16LE(2) / 118.85795 - 160;
             this.emit('SBrick.voltage', voltage);
             this.emit('SBrick.temperature', temperature);
-            this.emit('SBrick.voltAndTemp', voltage, temperature);
+            this.emit('SBrick.voltAthis.characteristic.read();ndTemp', voltage, temperature);
+        } else if (this.readHandler) {
+            this.readHandler(data);
         }
     });
 
@@ -152,21 +155,19 @@ SBrick.prototype.readCommand = function (cmd, callback) {
     callback = callback || () => {};
 
     if (!this.blocking) {
-        this.writeCommand(cmd);
-
         this.blocking = true;
 
-        this.characteristic.read((err, data) => {
-            if (err) {
-                winston.warn("read error", err, cmd);
-            } else {
-                console.log(data);
-            }
+        this.writeCommand(cmd);
 
+        this.readHandler = (data) => {
+            winston.info("read", data);
+
+            this.readHandler = null;
             this.blocking = false;
+            callback(null, data);
+        };
+        this.characteristic.read(); //trigger extra read, apart from subscribe
 
-            callback(err, data);
-        });
     } else {
         winston.info('other read in progress');
         callback('other read in progress');
