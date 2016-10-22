@@ -10,6 +10,7 @@ const nobleConnected = function () {
         if (noble.state === 'poweredOn') {
             resolve();
         } else {
+            noble.removeAllListeners('stateChange');
             noble.on('stateChange', (state) => {
                 if (state === 'poweredOn') {
                     noble.removeAllListeners('stateChange');
@@ -139,9 +140,19 @@ SBrick.prototype.run = function (callback) {
 
     this.runInterval = setInterval(() => {
         if (this.connected && !this.blocking) {
-            this.channels.forEach((channel) => {
-                var cmd = channel.getCommand();
-                this.writeCommand(cmd);
+            var commands = this.channels.map((channel) => {
+                return channel.getCommand();
+            });
+
+            this.blocking = true;
+            this.writeCommand(commands[0]).then(() => {
+                return this.writeCommand(commands[1]);
+            }).then(() => {
+                return this.writeCommand(commands[2]);
+            }).then(() => {
+                return this.writeCommand(commands[3]);
+            }).then(() => {
+                this.blocking = false;
             });
         }
     }, 200);
@@ -154,10 +165,14 @@ SBrick.prototype.writeCommand = function (cmd) {
         cmd = new Buffer(cmd, "hex");
     }
 
-    this.characteristic.write(cmd, false, (err) => {
-        if (err) {
-            winston.warn("write error", err, cmd);
-        }
+    return new Promise((resolve, reject) => {
+        this.characteristic.write(cmd, false, (err) => {
+            if (err) {
+                winston.warn("write error", err, cmd);
+                return reject(err);
+            }
+            resolve();
+        });
     });
 };
 
@@ -167,17 +182,16 @@ SBrick.prototype.readCommand = function (cmd, callback) {
     if (!this.blocking) {
         this.blocking = true;
 
-        this.writeCommand(cmd);
+        this.writeCommand(cmd).then(() => {
+            this.readHandler = (data) => {
+                winston.info("read", data);
 
-        this.readHandler = (data) => {
-            winston.info("read", data);
-
-            this.readHandler = null;
-            this.blocking = false;
-            callback(null, data);
-        };
-        this.characteristic.read(); //trigger extra read, apart from subscribe
-
+                this.readHandler = null;
+                this.blocking = false;
+                callback(null, data);
+            };
+            this.characteristic.read(); //trigger extra read, apart from subscribe
+        });
     } else {
         winston.info('other read in progress');
         callback('other read in progress');
