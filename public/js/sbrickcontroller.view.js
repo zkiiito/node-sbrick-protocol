@@ -6,6 +6,7 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     initialize: function () {
+        this.views = [];
         this.model = new SBrickCollection();
 
         this.listenTo(this.model, 'add', this.addSBrickView);
@@ -17,10 +18,16 @@ var SBrickControllerView = Backbone.View.extend({
     addSBrickView: function (sbrick) {
         var sbrickView = new SBrickView({model: sbrick});
         sbrickView.render().$el.appendTo(this.$('#sbricks'));
+        this.views.push(sbrickView);
     },
 
     removeSBrickView: function (sbrick) {
-        this.$('#sbrick-control-panel-' + sbrick.get('uuid')).destroy();
+        this.views.reduceRight(function (acc, view, index, object) {
+            if (view.model === sbrick) {
+                view.destroy();
+                object.splice(index, 1);
+            }
+        }, []);
     },
 
     keydown: function (event) {
@@ -52,8 +59,10 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     scan: function () {
-        this.$('#sbrick-list-scan').attr('disabled', 'disabled');
-        Socket.scan();
+        if (!this.model.some({connected: true}) || confirm('Warning: this will disconnect everything!')) {
+            this.$('#sbrick-list-scan').attr('disabled', 'disabled');
+            Socket.scan();
+        }
     },
 
     scanResponse: function (sbricks) {
@@ -87,5 +96,9 @@ var SBrickControllerView = Backbone.View.extend({
         var time = new Date().getTime();
         this.model.get(uuid).addVoltage(time, voltage);
         this.model.get(uuid).addTemperature(time, temperature);
+    },
+
+    disconnectedFromServer: function () {
+        this.model.set([]);
     }
 });

@@ -3,4 +3,3 @@ var app = new SBrickControllerView({
 });
 
 Socket.initialize();
-Socket.scan();
