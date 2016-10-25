@@ -24,7 +24,7 @@ var SBrick = Backbone.Model.extend(
         toJSON: function (options) {
             var json = {
                 uuid: this.get('uuid'),
-                password: this.get('password'),
+                //password: this.get('password'),
                 channels: this.channels.toJSON(options)
             };
             return json;

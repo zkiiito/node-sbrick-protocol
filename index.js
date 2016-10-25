@@ -6,6 +6,10 @@ const io = require('socket.io')(server);
 const bodyParser = require('body-parser');
 const storage = require('node-persist');
 const async = require('async');
+const Ajv = require('ajv');
+const schema = require('./SBrickSchema');
+
+const ajv = new Ajv();
 
 storage.initSync({
     dir: __dirname + '/data'
@@ -15,9 +19,13 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname + '/public'));
 
 app.put('/sbricks/:uuid', function (req, res) {
-    storage.setItem(req.params.uuid, req.body).then(() => {
-        res.sendStatus(200);
-    });
+    if (!ajv.validate(schema, req.body)) {
+        res.status(400).send(ajv.errors);
+    } else {
+        storage.setItem(req.params.uuid, req.body).then(() => {
+            res.sendStatus(200);
+        });
+    }
 });
 
 io.on('connection', function (socket) {

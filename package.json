@@ -17,6 +17,7 @@
   "author": "zkiiito",
   "license": "MIT",
   "dependencies": {
+    "ajv": "^4.8.2",
     "async": "^2.1.1",
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
@@ -34,7 +35,6 @@
     "grunt-contrib-uglify": "^2.0.0",
     "grunt-text-replace": "^0.4.0",
     "pre-commit": "^1.1.2",
-
     "jquery": "^3.1.1",
     "lodash": "^4.16.4",
     "backbone": "^1.3.3",

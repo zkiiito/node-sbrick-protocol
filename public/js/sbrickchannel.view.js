@@ -23,8 +23,8 @@ var SBrickChannelView = Backbone.View.extend({
 
     updateModel: function () {
         this.model.set({
-            'min': this.$('.sbrick-control-panel-channel-minvalue').val(),
-            'max': this.$('.sbrick-control-panel-channel-maxvalue').val()
+            'min': parseInt(this.$('.sbrick-control-panel-channel-minvalue').val(), 10),
+            'max': parseInt(this.$('.sbrick-control-panel-channel-maxvalue').val(), 10)
         });
     },
 
