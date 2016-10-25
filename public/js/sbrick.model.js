@@ -64,6 +64,14 @@ var SBrick = Backbone.Model.extend(
             if (this.get('connected')) {
                 this.trigger('disconnect', this);
             }
+        },
+
+        setConnected: function (connected) {
+            this.set('connected', connected);
+            if (connected === false){
+                this.voltages.clear();
+                this.temperatures.clear();
+            }
         }
     }
 );

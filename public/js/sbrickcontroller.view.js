@@ -71,7 +71,7 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     connected: function (uuid) {
-        this.model.get(uuid).set('connected', true);
+        this.model.get(uuid).setConnected(true);
     },
 
     disconnect: function (sbrick) {
@@ -80,7 +80,7 @@ var SBrickControllerView = Backbone.View.extend({
     },
 
     disconnected: function (uuid) {
-        this.model.get(uuid).set('connected', false);
+        this.model.get(uuid).setConnected(false);
     },
 
     voltAndTemp: function (uuid, voltage, temperature) {

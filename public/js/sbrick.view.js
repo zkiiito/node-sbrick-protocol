@@ -33,7 +33,7 @@ var SBrickView = Backbone.View.extend({
     initChart: function () {
         if (this.timeline === null) {
             this.resizeCanvas();
-            this.timeline = new SmoothieChart();
+            this.timeline = new SmoothieChart({minValue:0, millisPerPixel:25});
 
             this.timeline.addTimeSeries(this.model.voltages, {
                 strokeStyle: 'rgba(0, 255, 0, 1)',
@@ -48,6 +48,12 @@ var SBrickView = Backbone.View.extend({
             });
 
             this.timeline.streamTo(this.$('.sbrick-control-panel-chart')[0]);
+        } else {
+            if (this.model.get('connected')) {
+                this.timeline.start();
+            } else {
+                this.timeline.stop();
+            }
         }
     },
 
