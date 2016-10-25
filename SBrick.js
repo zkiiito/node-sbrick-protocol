@@ -200,19 +200,19 @@ SBrick.prototype.readCommand = function (cmd, callback) {
 
 SBrick.prototype.needAuthentication = function (callback) {
     this.readCommand("02", function (err, data) {
-        return callback(err, data.readUInt8(0) === 1);
+        return callback(err, err ? null : (data.readUInt8(0) === 1));
     });
 };
 
 SBrick.prototype.isAuthenticated = function (callback) {
     this.readCommand("03", function (err, data) {
-        return callback(err, data.readUInt8(0) === 1);
+        return callback(err, err ? err : (data.readUInt8(0) === 1));
     });
 };
 
 SBrick.prototype.getUserId = function (callback) {
     this.readCommand("04", function (err, data) {
-        return callback(err, data.readUInt8(0));
+        return callback(err, err ? err : data.readUInt8(0));
     });
 };
 
@@ -248,19 +248,18 @@ SBrick.prototype.setAuthenticationTimeout = function (timeout) {
 
 SBrick.prototype.getAuthenticationTimeout = function (callback) {
     this.readCommand("09", function (err, data) {
-        return callback(err, data.readUInt8(0));
+        return callback(err, err ? null : data.readUInt8(0));
+    });
+};
+
+SBrick.prototype.getBrickID = function (callback) {
+    this.readCommand("0A", function (err, data) {
+        return callback(err, err ? null : data.toString());
     });
 };
 
 //TODO
-SBrick.prototype.getBrickID = function (callback) {
-    this.readCommand("0A", function (err, data) {
-        //< BRICK ID, 6 byte BlueGiga ID >
-        //return callback(err, data.readUInt8(0));
-    });
-};
-
-//SBrick.prototype.quickDriveSetup = function (channels) {};
+SBrick.prototype.quickDriveSetup = function (channels) {};
 
 //TODO
 SBrick.prototype.readQuickDriveSetup =  function (callback) {
@@ -280,17 +279,24 @@ SBrick.prototype.setWatchdogTimeout = function (timeout) {
 
 SBrick.prototype.getWatchdogTimeout = function (callback) {
     this.readCommand("0E", function (err, data) {
-        return callback(err, data.readUInt8(0));
+        return callback(err, err ? null : data.readUInt8(0));
+    });
+};
+
+SBrick.prototype.queryADCVoltage = function (callback) {
+    this.readCommand("0F00", function (err, data) {
+        return callback(err, err ? null : convertToVoltage(data.readUInt16LE(0)));
+    });
+};
+
+SBrick.prototype.queryADCTemperature = function (callback) {
+    this.readCommand("0F0E", function (err, data) {
+        return callback(err, err ? null : convertToTemperature(data.readUInt16LE(0)));
     });
 };
 
 //TODO
-SBrick.prototype.queryADC = function (channelId, callback) {
-    //0F < ADC channel ID, 00 or 0e >
-    // voltage/temperature
-};
-
-//SBrick.prototype.sendEvent = function (eventID) {};
+SBrick.prototype.sendEvent = function (eventID) {};
 
 SBrick.prototype.eraseUserFlashOnNextReboot = function () {
     this.writeCommand("11");
@@ -300,11 +306,14 @@ SBrick.prototype.reboot = function () {
     this.writeCommand("12");
 };
 
-//SBrick.prototype.brakeWithPWMSupport = function () {};
-
 //TODO
+SBrick.prototype.brakeWithPWMSupport = function () {};
+
 SBrick.prototype.setThermalLimit = function (limit) {
-    //14 <2 byte ADC value>
+    //celsius = ADC / 118.85795 - 160
+    var limitADC = (limit + 160) * 118.85795;
+    limitADC = ("00" + limitADC.toString(16)).substr(-2);
+    this.writeCommand("12" + limitADC);
 };
 
 SBrick.prototype.readThermalLimit = function (callback) {
@@ -313,9 +322,11 @@ SBrick.prototype.readThermalLimit = function (callback) {
     });
 };
 
-//SBrick.prototype.writeProgram = function (offset, data) {};
+//TODO
+SBrick.prototype.writeProgram = function (offset, data) {};
 
-//SBrick.prototype.readProgram = function (offset) {};
+//TODO
+SBrick.prototype.readProgram = function (offset) {};
 
 SBrick.prototype.saveProgram = function () {
     this.writeCommand("18");
@@ -325,25 +336,31 @@ SBrick.prototype.eraseProgram = function () {
     this.writeCommand("19");
 };
 
-//SBrick.prototype.setEvent = function (eventID, offset) {};
+//TODO
+SBrick.prototype.setEvent = function (eventID, offset) {};
 
-//SBrick.prototype.readEvent = function (eventID) {};
+//TODO
+SBrick.prototype.readEvent = function (eventID) {};
 
 SBrick.prototype.saveEvents = function () {
     this.writeCommand("1C");
 };
 
-//SBrick.prototype.startProgram = function (address) {};
+//TODO
+SBrick.prototype.startProgram = function (address) {};
 
 SBrick.prototype.stopProgram = function () {
     this.writeCommand("1E");
 };
 
-//SBrick.prototype.setPWMCounterValue = function () {};
+//TODO
+SBrick.prototype.setPWMCounterValue = function () {};
 
-//SBrick.prototype.getPWMCounterValue = function () {};
+//TODO
+SBrick.prototype.getPWMCounterValue = function () {};
 
-//SBrick.prototype.savePWMCounterValue = function () {};
+//TODO
+SBrick.prototype.savePWMCounterValue = function () {};
 
 //TODO
 SBrick.prototype.getChannelStatus = function () {
@@ -356,9 +373,11 @@ SBrick.prototype.isGuestPasswordSet = function (callback) {
     });
 };
 
-//SBrick.prototype.setConnectionParameters = function () {};
+//TODO
+SBrick.prototype.setConnectionParameters = function () {};
 
-//SBrick.prototype.getConnectionParameters = function () {};
+//TODO
+SBrick.prototype.getConnectionParameters = function () {};
 
 SBrick.prototype.setReleaseOnReset = function (value) {
     if (value === false) {
