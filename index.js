@@ -77,6 +77,17 @@ io.on('connection', function (socket) {
         }
     });
 
+    socket.on('SBrick.command', (uuid, command) => {
+        console.log(uuid, command);
+        if (socket.sbricks.hasOwnProperty(uuid)) {
+            if (typeof socket.sbricks[uuid][command] === 'function') {
+                socket.sbricks[uuid][command]((err, res) => {
+                    console.log(err, res);
+                });
+            }
+        }
+    });
+
     socket.on('disconnect', () => {
         Object.keys(socket.sbricks).forEach((uuid) => {
             socket.sbricks[uuid].disconnect();

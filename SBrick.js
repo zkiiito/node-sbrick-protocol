@@ -25,7 +25,7 @@ const convertToVoltage = function (value) {
     return value * 0.83875 / 2047.0;
 };
 
-const convertToTemperature = function (value) {
+const convertToCelsius = function (value) {
     return value  / 118.85795 - 160;
 };
 
@@ -36,7 +36,6 @@ function SBrick (uuid) {
     this.runInterval = null;
     this.blocking = false;
     this.peripheral = null;
-    this.readHandler = null;
 
     this.channels = [
         new SBrickChannel(0),
@@ -123,12 +122,12 @@ SBrick.prototype.run = function (callback) {
     this.characteristic.on('data', (data, isNotification) => {
         if (isNotification) {
             const voltage = convertToVoltage(data.readUInt16LE(0));
-            const temperature = convertToTemperature(data.readUInt16LE(2));
+            const temperature = convertToCelsius(data.readUInt16LE(2));
             this.emit('SBrick.voltage', voltage);
             this.emit('SBrick.temperature', temperature);
             this.emit('SBrick.voltAndTemp', voltage, temperature);
-        } else if (this.readHandler) {
-            this.readHandler(data);
+        } else {
+            this.emit('SBrick.read', data);
         }
     });
 
@@ -145,6 +144,7 @@ SBrick.prototype.run = function (callback) {
             });
 
             this.blocking = true;
+            var startTime = new Date().getTime();
             this.writeCommand(commands[0]).then(() => {
                 return this.writeCommand(commands[1]);
             }).then(() => {
@@ -152,6 +152,11 @@ SBrick.prototype.run = function (callback) {
             }).then(() => {
                 return this.writeCommand(commands[3]);
             }).then(() => {
+                this.blocking = false;
+                this.emit('SBrick.runDone');
+                //console.log('time: ', new Date().getTime() - startTime);
+            }).catch((err) => {
+                winston.warn('run error', err);
                 this.blocking = false;
             });
         }
@@ -179,23 +184,24 @@ SBrick.prototype.writeCommand = function (cmd) {
 SBrick.prototype.readCommand = function (cmd, callback) {
     callback = callback || () => {};
 
-    if (!this.blocking) {
-        this.blocking = true;
+    this.once('SBrick.runDone', () => {
+        if (!this.blocking) {
+            this.blocking = true;
 
-        this.writeCommand(cmd).then(() => {
-            this.readHandler = (data) => {
-                winston.info("read", data);
-
-                this.readHandler = null;
+            this.writeCommand(cmd).then(() => {
+                this.once('SBrick.read', (data) => {
+                    winston.info("read", data);
+                    this.blocking = false;
+                    callback(null, data);
+                });
+                this.characteristic.read(); //trigger extra read, apart from subscribe
+            }).catch(() => {
                 this.blocking = false;
-                callback(null, data);
-            };
-            this.characteristic.read(); //trigger extra read, apart from subscribe
-        });
-    } else {
-        winston.info('other read in progress');
-        callback('other read in progress');
-    }
+            });
+        } else {
+            winston.info('other read in progress');
+        }
+    });
 };
 
 SBrick.prototype.needAuthentication = function (callback) {
@@ -206,13 +212,13 @@ SBrick.prototype.needAuthentication = function (callback) {
 
 SBrick.prototype.isAuthenticated = function (callback) {
     this.readCommand("03", function (err, data) {
-        return callback(err, err ? err : (data.readUInt8(0) === 1));
+        return callback(err, err ? null : (data.readUInt8(0) === 1));
     });
 };
 
 SBrick.prototype.getUserId = function (callback) {
     this.readCommand("04", function (err, data) {
-        return callback(err, err ? err : data.readUInt8(0));
+        return callback(err, err ? null : data.readUInt8(0));
     });
 };
 
@@ -254,7 +260,7 @@ SBrick.prototype.getAuthenticationTimeout = function (callback) {
 
 SBrick.prototype.getBrickID = function (callback) {
     this.readCommand("0A", function (err, data) {
-        return callback(err, err ? null : data.toString());
+        return callback(err, err ? null : data.toString('hex'));
     });
 };
 
@@ -291,7 +297,7 @@ SBrick.prototype.queryADCVoltage = function (callback) {
 
 SBrick.prototype.queryADCTemperature = function (callback) {
     this.readCommand("0F0E", function (err, data) {
-        return callback(err, err ? null : convertToTemperature(data.readUInt16LE(0)));
+        return callback(err, err ? null : convertToCelsius(data.readUInt16LE(0)));
     });
 };
 
@@ -313,12 +319,12 @@ SBrick.prototype.setThermalLimit = function (limit) {
     //celsius = ADC / 118.85795 - 160
     var limitADC = (limit + 160) * 118.85795;
     limitADC = ("00" + limitADC.toString(16)).substr(-2);
-    this.writeCommand("12" + limitADC);
+    this.writeCommand("14" + limitADC);
 };
 
 SBrick.prototype.readThermalLimit = function (callback) {
-    this.readCommand("0E", function (err, data) {
-        return callback(err, convertToTemperature(data.readUInt16LE(0)));
+    this.readCommand("15", function (err, data) {
+        return callback(err, convertToCelsius(data.readUInt16LE(0)));
     });
 };
 
@@ -369,7 +375,7 @@ SBrick.prototype.getChannelStatus = function () {
 
 SBrick.prototype.isGuestPasswordSet = function (callback) {
     this.readCommand("23", function (err, data) {
-        return callback(err, data.readUint8(0) === 1);
+        return callback(err, err ? null : data.readUInt8(0) === 1);
     });
 };
 
@@ -389,19 +395,19 @@ SBrick.prototype.setReleaseOnReset = function (value) {
 
 SBrick.prototype.getReleaseOnReset = function (callback) {
     this.readCommand("27", function (err, data) {
-        return callback(err, data.readUint8(0) === 1);
+        return callback(err, err ? null : data.readUInt8(0) === 1);
     });
 };
 
 SBrick.prototype.readPowerCycleCounter = function (callback) {
     this.readCommand("28", function (err, data) {
-        return callback(err, data.readUint32LE(0));
+        return callback(err, err ? null : data.readUInt32LE(0));
     });
 };
 
 SBrick.prototype.readUptimeCounter = function (callback) {
     this.readCommand("29", function (err, data) {
-        return callback(err, data.readUint32LE(0));
+        return callback(err, err ? null : data.readUInt32LE(0));
     });
 };
 
