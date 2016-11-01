@@ -2,6 +2,7 @@ const noble = require('noble');
 const winston = require('winston');
 const util = require('util');
 const EventEmitter = require('events').EventEmitter;
+const Queue = require('promise-queue');
 const SBrickChannel = require('./SBrickChannel');
 const SBrickAdvertisementData = require('./SBrickAdvertisementData');
 
@@ -34,8 +35,8 @@ function SBrick (uuid) {
     this.connected = false;
     this.characteristic = null;
     this.runInterval = null;
-    this.blocking = false;
     this.peripheral = null;
+    this.queue = new Queue(1, Infinity);
 
     this.channels = [
         new SBrickChannel(0),
@@ -138,26 +139,9 @@ SBrick.prototype.run = function (callback) {
     });
 
     this.runInterval = setInterval(() => {
-        if (this.connected && !this.blocking) {
-            var commands = this.channels.map((channel) => {
-                return channel.getCommand();
-            });
-
-            this.blocking = true;
-            var startTime = new Date().getTime();
-            this.writeCommand(commands[0]).then(() => {
-                return this.writeCommand(commands[1]);
-            }).then(() => {
-                return this.writeCommand(commands[2]);
-            }).then(() => {
-                return this.writeCommand(commands[3]);
-            }).then(() => {
-                this.blocking = false;
-                this.emit('SBrick.runDone');
-                //console.log('time: ', new Date().getTime() - startTime);
-            }).catch((err) => {
-                winston.warn('run error', err);
-                this.blocking = false;
+        if (this.connected && this.queue.getQueueLength() === 0) {
+            this.channels.forEach((channel) => {
+                this.queue.add(this.writeCommand(channel.getCommand()));
             });
         }
     }, 200);
@@ -181,44 +165,45 @@ SBrick.prototype.writeCommand = function (cmd) {
     });
 };
 
-SBrick.prototype.readCommand = function (cmd, callback) {
-    callback = callback || () => {};
-
-    this.once('SBrick.runDone', () => {
-        if (!this.blocking) {
-            this.blocking = true;
-
-            this.writeCommand(cmd).then(() => {
-                this.once('SBrick.read', (data) => {
-                    winston.info("read", data);
-                    this.blocking = false;
-                    callback(null, data);
-                });
-                this.characteristic.read(); //trigger extra read, apart from subscribe
-            }).catch(() => {
-                this.blocking = false;
+SBrick.prototype.readCommand = function (cmd) {
+    return new Promise((resolve, reject) => {
+        this.writeCommand(cmd).then(() => {
+            this.once('SBrick.read', (data) => {
+                winston.info("read", cmd, data);
+                return resolve(data);
             });
-        } else {
-            winston.info('other read in progress');
-        }
+            this.characteristic.read(); //trigger extra read, apart from subscribe
+        }).catch(reject);
     });
 };
 
-SBrick.prototype.needAuthentication = function (callback) {
-    this.readCommand("02", function (err, data) {
-        return callback(err, err ? null : (data.readUInt8(0) === 1));
+SBrick.prototype.needAuthentication = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("02");
+        }).then((data) => {
+            resolve(data.readUInt8(0) === 1);
+        }).catch(reject);
     });
 };
 
-SBrick.prototype.isAuthenticated = function (callback) {
-    this.readCommand("03", function (err, data) {
-        return callback(err, err ? null : (data.readUInt8(0) === 1));
+SBrick.prototype.isAuthenticated = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("03");
+        }).then((data) => {
+            resolve(data.readUInt8(0) === 1);
+        }).catch(reject);
     });
 };
 
-SBrick.prototype.getUserId = function (callback) {
-    this.readCommand("04", function (err, data) {
-        return callback(err, err ? null : data.readUInt8(0));
+SBrick.prototype.getUserId = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("04");
+        }).then((data) => {
+            resolve(data.readUInt8(0));
+        }).catch(reject);
     });
 };
 
@@ -230,11 +215,17 @@ SBrick.prototype.authenticate = function (userId, password) {
 };
 
 SBrick.prototype.clearPassword = function (userId) {
-    if (userId === 0) {
-        this.writeCommand("0600");
-    } else if (userId === 1) {
-        this.writeCommand("0601");
-    }
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            if (userId === 0) {
+                return this.writeCommand("0600");
+            } else if (userId === 1) {
+                return this.writeCommand("0601");
+            }
+        }).then(() => {
+            resolve();
+        }).catch(reject);
+    });
 };
 
 //TODO
@@ -245,22 +236,39 @@ SBrick.prototype.setPassword = function (userId, password) {
 };
 
 SBrick.prototype.setAuthenticationTimeout = function (timeout) {
-    if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
-        var cmd = "08";
-        cmd += ("00" + timeout.toString(16)).substr(-2);
-        this.writeCommand(cmd);
-    }
-};
+    return new Promise((resolve, reject) => {
+        if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
+            var cmd = "08";
+            cmd += ("00" + timeout.toString(16)).substr(-2);
 
-SBrick.prototype.getAuthenticationTimeout = function (callback) {
-    this.readCommand("09", function (err, data) {
-        return callback(err, err ? null : data.readUInt8(0));
+            this.queue.add(() => {
+                return this.writeCommand(cmd);
+            }).then(() => {
+                resolve();
+            }).catch(reject);
+        } else {
+            reject('invalid value: timeout');
+        }
     });
 };
 
-SBrick.prototype.getBrickID = function (callback) {
-    this.readCommand("0A", function (err, data) {
-        return callback(err, err ? null : data.toString('hex'));
+SBrick.prototype.getAuthenticationTimeout = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("09");
+        }).then((data) => {
+            resolve(data.readUInt8(0));
+        }).catch(reject);
+    });
+};
+
+SBrick.prototype.getBrickID = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("0A");
+        }).then((data) => {
+            resolve(data.toString('hex'));
+        }).catch(reject);
     });
 };
 
@@ -268,36 +276,61 @@ SBrick.prototype.getBrickID = function (callback) {
 SBrick.prototype.quickDriveSetup = function (channels) {};
 
 //TODO
-SBrick.prototype.readQuickDriveSetup =  function (callback) {
-    this.readCommand("0C", function (err, data) {
-        //Return: <5 byte quick drive setup>
-        //return callback(err, data.readUInt8());
+SBrick.prototype.readQuickDriveSetup =  function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("0C");
+        }).then((data) => {
+            //Return: <5 byte quick drive setup>
+            resolve(data.toString('hex'));
+        }).catch(reject);
     });
 };
 
 SBrick.prototype.setWatchdogTimeout = function (timeout) {
-    if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
-        var cmd = "0D";
-        cmd += ("00" + timeout.toString(16)).substr(-2);
-        this.writeCommand(cmd);
-    }
-};
+    return new Promise((resolve, reject) => {
+        if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
+            var cmd = "0D";
+            cmd += ("00" + timeout.toString(16)).substr(-2);
 
-SBrick.prototype.getWatchdogTimeout = function (callback) {
-    this.readCommand("0E", function (err, data) {
-        return callback(err, err ? null : data.readUInt8(0));
+            this.queue.add(() => {
+                return this.writeCommand(cmd);
+            }).then(() => {
+                resolve();
+            }).catch(reject);
+        } else {
+            reject('invalid value: timeout');
+        }
     });
 };
 
-SBrick.prototype.queryADCVoltage = function (callback) {
-    this.readCommand("0F00", function (err, data) {
-        return callback(err, err ? null : convertToVoltage(data.readUInt16LE(0)));
+SBrick.prototype.getWatchdogTimeout = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("0E");
+        }).then((data) => {
+            resolve(data.readUInt8(0));
+        }).catch(reject);
     });
 };
 
-SBrick.prototype.queryADCTemperature = function (callback) {
-    this.readCommand("0F0E", function (err, data) {
-        return callback(err, err ? null : convertToCelsius(data.readUInt16LE(0)));
+SBrick.prototype.queryADCVoltage = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("0F00");
+        }).then((data) => {
+            resolve(convertToVoltage(data.readUInt16LE(0)));
+        }).catch(reject);
+    });
+};
+
+SBrick.prototype.queryADCTemperature = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("0F0E");
+        }).then((data) => {
+            resolve(convertToCelsius(data.readUInt16LE(0)));
+        }).catch(reject);
     });
 };
 
@@ -305,26 +338,48 @@ SBrick.prototype.queryADCTemperature = function (callback) {
 SBrick.prototype.sendEvent = function (eventID) {};
 
 SBrick.prototype.eraseUserFlashOnNextReboot = function () {
-    this.writeCommand("11");
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.writeCommand("11");
+        }).then(() => {
+            resolve();
+        }).catch(reject);
+    });
 };
 
 SBrick.prototype.reboot = function () {
-    this.writeCommand("12");
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.writeCommand("12");
+        }).then(() => {
+            resolve();
+        }).catch(reject);
+    });
 };
 
 //TODO
 SBrick.prototype.brakeWithPWMSupport = function () {};
 
 SBrick.prototype.setThermalLimit = function (limit) {
-    //celsius = ADC / 118.85795 - 160
-    var limitADC = (limit + 160) * 118.85795;
-    limitADC = ("00" + limitADC.toString(16)).substr(-2);
-    this.writeCommand("14" + limitADC);
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            //celsius = ADC / 118.85795 - 160
+            var limitADC = (limit + 160) * 118.85795;
+            limitADC = ("00" + limitADC.toString(16)).substr(-2);
+            return this.writeCommand("14" + limitADC);
+        }).then(() => {
+            resolve();
+        }).catch(reject);
+    });
 };
 
-SBrick.prototype.readThermalLimit = function (callback) {
-    this.readCommand("15", function (err, data) {
-        return callback(err, convertToCelsius(data.readUInt16LE(0)));
+SBrick.prototype.readThermalLimit = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("15");
+        }).then((data) => {
+            resolve(convertToCelsius(data.readUInt16LE(0)));
+        }).catch(reject);
     });
 };
 
@@ -335,11 +390,23 @@ SBrick.prototype.writeProgram = function (offset, data) {};
 SBrick.prototype.readProgram = function (offset) {};
 
 SBrick.prototype.saveProgram = function () {
-    this.writeCommand("18");
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.writeCommand("18");
+        }).then(() => {
+            resolve();
+        }).catch(reject);
+    });
 };
 
 SBrick.prototype.eraseProgram = function () {
-    this.writeCommand("19");
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.writeCommand("19");
+        }).then(() => {
+            resolve();
+        }).catch(reject);
+    });
 };
 
 //TODO
@@ -349,14 +416,26 @@ SBrick.prototype.setEvent = function (eventID, offset) {};
 SBrick.prototype.readEvent = function (eventID) {};
 
 SBrick.prototype.saveEvents = function () {
-    this.writeCommand("1C");
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.writeCommand("1C");
+        }).then(() => {
+            resolve();
+        }).catch(reject);
+    });
 };
 
 //TODO
 SBrick.prototype.startProgram = function (address) {};
 
 SBrick.prototype.stopProgram = function () {
-    this.writeCommand("1E");
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.writeCommand("1E");
+        }).then(() => {
+            resolve();
+        }).catch(reject);
+    });
 };
 
 //TODO
@@ -373,9 +452,13 @@ SBrick.prototype.getChannelStatus = function () {
     // Return < brake status bits, 1 byte, 1:brake on, 0: brake off > <1 byte direction flags> <5 byte channel drive values from 0 to 4>
 };
 
-SBrick.prototype.isGuestPasswordSet = function (callback) {
-    this.readCommand("23", function (err, data) {
-        return callback(err, err ? null : data.readUInt8(0) === 1);
+SBrick.prototype.isGuestPasswordSet = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("23");
+        }).then((data) => {
+            resolve(data.readUInt8(0) === 1);
+        }).catch(reject);
     });
 };
 
@@ -386,28 +469,46 @@ SBrick.prototype.setConnectionParameters = function () {};
 SBrick.prototype.getConnectionParameters = function () {};
 
 SBrick.prototype.setReleaseOnReset = function (value) {
-    if (value === false) {
-        this.writeCommand("2600")
-    } else if (value === true) {
-        this.writeCommand("2601");
-    }
-};
-
-SBrick.prototype.getReleaseOnReset = function (callback) {
-    this.readCommand("27", function (err, data) {
-        return callback(err, err ? null : data.readUInt8(0) === 1);
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            if (value === false) {
+                return this.writeCommand("2600")
+            } else if (value === true) {
+                return this.writeCommand("2601");
+            }
+        }).then(() => {
+            resolve();
+        }).catch(reject);
     });
 };
 
-SBrick.prototype.readPowerCycleCounter = function (callback) {
-    this.readCommand("28", function (err, data) {
-        return callback(err, err ? null : data.readUInt32LE(0));
+SBrick.prototype.getReleaseOnReset = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("27");
+        }).then((data) => {
+            resolve(data.readUInt8(0) === 1);
+        }).catch(reject);
     });
 };
 
-SBrick.prototype.readUptimeCounter = function (callback) {
-    this.readCommand("29", function (err, data) {
-        return callback(err, err ? null : data.readUInt32LE(0));
+SBrick.prototype.readPowerCycleCounter = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("28");
+        }).then((data) => {
+            resolve(data.readUInt32LE(0));
+        }).catch(reject);
+    });
+};
+
+SBrick.prototype.readUptimeCounter = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand("29");
+        }).then((data) => {
+            resolve(data.readUInt32LE(0));
+        }).catch(reject);
     });
 };
 

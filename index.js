@@ -81,9 +81,7 @@ io.on('connection', function (socket) {
         console.log(uuid, command);
         if (socket.sbricks.hasOwnProperty(uuid)) {
             if (typeof socket.sbricks[uuid][command] === 'function') {
-                socket.sbricks[uuid][command]((err, res) => {
-                    console.log(err, res);
-                });
+                socket.sbricks[uuid][command]().then(console.log).catch(console.log);
             }
         }
     });
