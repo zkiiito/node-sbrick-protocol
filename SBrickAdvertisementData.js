@@ -58,9 +58,7 @@ const handleSection = {
 
     //BlueGiga ADC sensor raw reading
     s3: function (data, bytes) {
-        if (bytes[0] === 1) {
-
-        } else {
+        if (bytes[0] !== 1) {
             throw new Error('not SBrick');
         }
     },
@@ -70,7 +68,7 @@ const handleSection = {
         if (bytes[0] === 2) {
             bytes.shift();
             data.identifier = bytes.map(function (byte) {
-                return ("00" + byte.toString(16)).substr(-2);
+                return ('00' + byte.toString(16)).substr(-2);
             }).join(':');
         } else {
             throw new Error('not SBrick');

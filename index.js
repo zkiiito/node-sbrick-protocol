@@ -40,7 +40,7 @@ io.on('connection', function (socket) {
             async.map(sbricks, (sbrick, callback) => {
                 storage.getItem(sbrick.uuid).then((value) => {
                     callback(null, Object.assign({}, value, sbrick));
-                })
+                });
             }, (err, results) => {
                 io.emit('SBrick.scanResponse', results);
             });

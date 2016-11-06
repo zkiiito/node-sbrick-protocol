@@ -57,7 +57,7 @@ SBrick.prototype.start = function (callback, startFunction) {
             startFunction(this);
         }
         this.run(callback);
-    })
+    });
 };
 
 SBrick.prototype.connect = function (callback) {
@@ -90,7 +90,7 @@ SBrick.prototype.connect = function (callback) {
 
                         peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
                             if (err) {
-                                winston.warn("service discovery error", err);
+                                winston.warn('service discovery error', err);
                                 return callback(err);
                             }
 
@@ -106,7 +106,7 @@ SBrick.prototype.connect = function (callback) {
                 }
             });
 
-            noble.startScanning()
+            noble.startScanning();
         });
     }
 };
@@ -151,13 +151,13 @@ SBrick.prototype.run = function (callback) {
 
 SBrick.prototype.writeCommand = function (cmd) {
     if (!(cmd instanceof Buffer)) {
-        cmd = new Buffer(cmd, "hex");
+        cmd = new Buffer(cmd, 'hex');
     }
 
     return new Promise((resolve, reject) => {
         this.characteristic.write(cmd, false, (err) => {
             if (err) {
-                winston.warn("write error", err, cmd);
+                winston.warn('write error', err, cmd);
                 return reject(err);
             }
             resolve();
@@ -169,7 +169,7 @@ SBrick.prototype.readCommand = function (cmd) {
     return new Promise((resolve, reject) => {
         this.writeCommand(cmd).then(() => {
             this.once('SBrick.read', (data) => {
-                winston.info("read", cmd, data);
+                winston.info('read', cmd, data);
                 return resolve(data);
             });
             this.characteristic.read(); //trigger extra read, apart from subscribe
@@ -180,7 +180,7 @@ SBrick.prototype.readCommand = function (cmd) {
 SBrick.prototype.needAuthentication = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("02");
+            return this.readCommand('02');
         }).then((data) => {
             resolve(data.readUInt8(0) === 1);
         }).catch(reject);
@@ -190,7 +190,7 @@ SBrick.prototype.needAuthentication = function () {
 SBrick.prototype.isAuthenticated = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("03");
+            return this.readCommand('03');
         }).then((data) => {
             resolve(data.readUInt8(0) === 1);
         }).catch(reject);
@@ -200,7 +200,7 @@ SBrick.prototype.isAuthenticated = function () {
 SBrick.prototype.getUserId = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("04");
+            return this.readCommand('04');
         }).then((data) => {
             resolve(data.readUInt8(0));
         }).catch(reject);
@@ -218,13 +218,14 @@ SBrick.prototype.clearPassword = function (userId) {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
             if (userId === 0) {
-                return this.writeCommand("0600");
+                return this.writeCommand('0600');
             } else if (userId === 1) {
-                return this.writeCommand("0601");
+                return this.writeCommand('0601');
+            } else {
+                reject('invalid value: userId');
             }
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+        }).then(resolve)
+        .catch(reject);
     });
 };
 
@@ -238,14 +239,13 @@ SBrick.prototype.setPassword = function (userId, password) {
 SBrick.prototype.setAuthenticationTimeout = function (timeout) {
     return new Promise((resolve, reject) => {
         if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
-            var cmd = "08";
-            cmd += ("00" + timeout.toString(16)).substr(-2);
+            var cmd = '08';
+            cmd += ('00' + timeout.toString(16)).substr(-2);
 
             this.queue.add(() => {
                 return this.writeCommand(cmd);
-            }).then(() => {
-                resolve();
-            }).catch(reject);
+            }).then(resolve)
+            .catch(reject);
         } else {
             reject('invalid value: timeout');
         }
@@ -255,7 +255,7 @@ SBrick.prototype.setAuthenticationTimeout = function (timeout) {
 SBrick.prototype.getAuthenticationTimeout = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("09");
+            return this.readCommand('09');
         }).then((data) => {
             resolve(data.readUInt8(0));
         }).catch(reject);
@@ -265,7 +265,7 @@ SBrick.prototype.getAuthenticationTimeout = function () {
 SBrick.prototype.getBrickID = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("0A");
+            return this.readCommand('0A');
         }).then((data) => {
             resolve(data.toString('hex'));
         }).catch(reject);
@@ -279,7 +279,7 @@ SBrick.prototype.quickDriveSetup = function (channels) {};
 SBrick.prototype.readQuickDriveSetup =  function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("0C");
+            return this.readCommand('0C');
         }).then((data) => {
             //Return: <5 byte quick drive setup>
             resolve(data.toString('hex'));
@@ -290,14 +290,13 @@ SBrick.prototype.readQuickDriveSetup =  function () {
 SBrick.prototype.setWatchdogTimeout = function (timeout) {
     return new Promise((resolve, reject) => {
         if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
-            var cmd = "0D";
-            cmd += ("00" + timeout.toString(16)).substr(-2);
+            var cmd = '0D';
+            cmd += ('00' + timeout.toString(16)).substr(-2);
 
             this.queue.add(() => {
                 return this.writeCommand(cmd);
-            }).then(() => {
-                resolve();
-            }).catch(reject);
+            }).then(resolve)
+            .catch(reject);
         } else {
             reject('invalid value: timeout');
         }
@@ -307,7 +306,7 @@ SBrick.prototype.setWatchdogTimeout = function (timeout) {
 SBrick.prototype.getWatchdogTimeout = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("0E");
+            return this.readCommand('0E');
         }).then((data) => {
             resolve(data.readUInt8(0));
         }).catch(reject);
@@ -317,7 +316,7 @@ SBrick.prototype.getWatchdogTimeout = function () {
 SBrick.prototype.queryADCVoltage = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("0F00");
+            return this.readCommand('0F00');
         }).then((data) => {
             resolve(convertToVoltage(data.readUInt16LE(0)));
         }).catch(reject);
@@ -327,7 +326,7 @@ SBrick.prototype.queryADCVoltage = function () {
 SBrick.prototype.queryADCTemperature = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("0F0E");
+            return this.readCommand('0F0E');
         }).then((data) => {
             resolve(convertToCelsius(data.readUInt16LE(0)));
         }).catch(reject);
@@ -340,20 +339,19 @@ SBrick.prototype.sendEvent = function (eventID) {};
 SBrick.prototype.eraseUserFlashOnNextReboot = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.writeCommand("11");
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+            return this.writeCommand('11');
+        }).then(resolve)
+        .catch(reject);
     });
 };
 
 SBrick.prototype.reboot = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.writeCommand("12");
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+            return this.writeCommand('12');
+        })
+        .then(resolve)
+        .catch(reject);
     });
 };
 
@@ -365,18 +363,17 @@ SBrick.prototype.setThermalLimit = function (limit) {
         this.queue.add(() => {
             //celsius = ADC / 118.85795 - 160
             var limitADC = (limit + 160) * 118.85795;
-            limitADC = ("00" + limitADC.toString(16)).substr(-2);
-            return this.writeCommand("14" + limitADC);
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+            limitADC = ('00' + limitADC.toString(16)).substr(-2);
+            return this.writeCommand('14' + limitADC);
+        }).then(resolve)
+        .catch(reject);
     });
 };
 
 SBrick.prototype.readThermalLimit = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("15");
+            return this.readCommand('15');
         }).then((data) => {
             resolve(convertToCelsius(data.readUInt16LE(0)));
         }).catch(reject);
@@ -392,20 +389,18 @@ SBrick.prototype.readProgram = function (offset) {};
 SBrick.prototype.saveProgram = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.writeCommand("18");
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+            return this.writeCommand('18');
+        }).then(resolve)
+        .catch(reject);
     });
 };
 
 SBrick.prototype.eraseProgram = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.writeCommand("19");
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+            return this.writeCommand('19');
+        }).then(resolve)
+        .catch(reject);
     });
 };
 
@@ -418,10 +413,9 @@ SBrick.prototype.readEvent = function (eventID) {};
 SBrick.prototype.saveEvents = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.writeCommand("1C");
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+            return this.writeCommand('1C');
+        }).then(resolve)
+        .catch(reject);
     });
 };
 
@@ -431,10 +425,9 @@ SBrick.prototype.startProgram = function (address) {};
 SBrick.prototype.stopProgram = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.writeCommand("1E");
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+            return this.writeCommand('1E');
+        }).then(resolve)
+        .catch(reject);
     });
 };
 
@@ -455,7 +448,7 @@ SBrick.prototype.getChannelStatus = function () {
 SBrick.prototype.isGuestPasswordSet = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("23");
+            return this.readCommand('23');
         }).then((data) => {
             resolve(data.readUInt8(0) === 1);
         }).catch(reject);
@@ -472,20 +465,19 @@ SBrick.prototype.setReleaseOnReset = function (value) {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
             if (value === false) {
-                return this.writeCommand("2600")
+                return this.writeCommand('2600');
             } else if (value === true) {
-                return this.writeCommand("2601");
+                return this.writeCommand('2601');
             }
-        }).then(() => {
-            resolve();
-        }).catch(reject);
+        }).then(resolve)
+        .catch(reject);
     });
 };
 
 SBrick.prototype.getReleaseOnReset = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("27");
+            return this.readCommand('27');
         }).then((data) => {
             resolve(data.readUInt8(0) === 1);
         }).catch(reject);
@@ -495,7 +487,7 @@ SBrick.prototype.getReleaseOnReset = function () {
 SBrick.prototype.readPowerCycleCounter = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("28");
+            return this.readCommand('28');
         }).then((data) => {
             resolve(data.readUInt32LE(0));
         }).catch(reject);
@@ -505,7 +497,7 @@ SBrick.prototype.readPowerCycleCounter = function () {
 SBrick.prototype.readUptimeCounter = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand("29");
+            return this.readCommand('29');
         }).then((data) => {
             resolve(data.readUInt32LE(0));
         }).catch(reject);
