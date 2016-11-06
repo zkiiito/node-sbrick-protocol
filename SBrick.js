@@ -5,6 +5,7 @@ const EventEmitter = require('events').EventEmitter;
 const Queue = require('promise-queue');
 const SBrickChannel = require('./SBrickChannel');
 const SBrickAdvertisementData = require('./SBrickAdvertisementData');
+const passwordGenerator = require('./SBrickPasswordGeneratorMD5');
 
 const nobleConnected = function () {
     return new Promise((resolve, reject) => {
@@ -47,6 +48,8 @@ function SBrick (uuid) {
 }
 
 util.inherits(SBrick, EventEmitter);
+
+SBrick.prototype.generatePassword = passwordGenerator;
 
 SBrick.prototype.start = function (callback, startFunction) {
     this.connect((err) => {
@@ -207,11 +210,18 @@ SBrick.prototype.getUserId = function () {
     });
 };
 
-//TODO
 SBrick.prototype.authenticate = function (userId, password) {
-    if (userId === 0 || userId === 1) {
-        //05 <1 byte user ID> <8 byte password>
-    }
+    return new Promise((resolve, reject) => {
+        if (userId === 0 || userId === 1) {
+            const cmd = '05' + this.generatePassword(password);
+            this.queue.add(() => {
+                return this.writeCommand(cmd);
+            }).then(resolve)
+            .catch(reject);
+        } else {
+            reject('invalid value: userId');
+        }
+    });
 };
 
 SBrick.prototype.clearPassword = function (userId) {
@@ -229,11 +239,18 @@ SBrick.prototype.clearPassword = function (userId) {
     });
 };
 
-//TODO
 SBrick.prototype.setPassword = function (userId, password) {
-    if (userId === 0 || userId === 1) {
-        //07 < User ID > <8 byte password>: set the password
-    }
+    return new Promise((resolve, reject) => {
+        if (userId === 0 || userId === 1) {
+            const cmd = '07' + this.generatePassword(password);
+            this.queue.add(() => {
+                return this.writeCommand(cmd);
+            }).then(resolve)
+            .catch(reject);
+        } else {
+            reject('invalid value: userId');
+        }
+    });
 };
 
 SBrick.prototype.setAuthenticationTimeout = function (timeout) {

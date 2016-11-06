@@ -77,11 +77,11 @@ io.on('connection', function (socket) {
         }
     });
 
-    socket.on('SBrick.command', (uuid, command) => {
-        console.log(uuid, command);
+    socket.on('SBrick.command', (uuid, command, args) => {
+        console.log(uuid, command, args);
         if (socket.sbricks.hasOwnProperty(uuid)) {
             if (typeof socket.sbricks[uuid][command] === 'function') {
-                socket.sbricks[uuid][command]().then(console.log).catch(console.log);
+                socket.sbricks[uuid][command].apply(socket.sbricks[uuid], args).then(console.log).catch(console.log);
             }
         }
     });
