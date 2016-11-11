@@ -20,8 +20,8 @@ var Socket = {
         app.scanResponse(sbricks);
     },
 
-    connect: function (uuid) {
-        this.socket.emit('SBrick.connect', uuid);
+    connect: function (uuid, password) {
+        this.socket.emit('SBrick.connect', uuid, password);
     },
 
     connected: function (uuid) {

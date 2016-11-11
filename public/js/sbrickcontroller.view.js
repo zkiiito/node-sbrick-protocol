@@ -76,7 +76,7 @@ var SBrickControllerView = Backbone.View.extend({
 
     connect: function (sbrick) {
         var uuid = sbrick.get('uuid');
-        Socket.connect(uuid);
+        Socket.connect(uuid, sbrick.get('password'));
     },
 
     connected: function (uuid) {

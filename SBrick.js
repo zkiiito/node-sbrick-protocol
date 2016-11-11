@@ -37,6 +37,7 @@ function SBrick (uuid) {
     this.characteristic = null;
     this.runInterval = null;
     this.peripheral = null;
+    this.authenticated = false;
     this.queue = new Queue(1, Infinity);
 
     this.channels = [
@@ -51,67 +52,60 @@ util.inherits(SBrick, EventEmitter);
 
 SBrick.prototype.generatePassword = passwordGenerator;
 
-SBrick.prototype.start = function (callback, startFunction) {
-    this.connect((err) => {
-        if (err) {
-            return callback(err);
-        }
-        if (startFunction) {
-            startFunction(this);
-        }
-        this.run(callback);
-    });
-};
+SBrick.prototype.connect = function () {
+    return new Promise((resolve, reject) => {
+        if (!this.connected) {
+            var found = false; //somehow discover discovered the same sbrick multiple times
+            nobleConnected().then(() => {
+                winston.info('scanning for', this.uuid);
+                noble.on('discover', (peripheral) => {
+                    winston.info('found', peripheral.uuid);
+                    if (!found && peripheral.uuid === this.uuid) {
+                        found = true;
+                        noble.stopScanning();
+                        this.peripheral = peripheral;
 
-SBrick.prototype.connect = function (callback) {
-    if (!this.connected) {
-        var found = false; //somehow discover discovered the same sbrick multiple times
-        nobleConnected().then(() => {
-            winston.info('scanning for', this.uuid);
-            noble.on('discover', (peripheral) => {
-                winston.info('found', peripheral.uuid);
-                if (!found && peripheral.uuid === this.uuid) {
-                    found = true;
-                    noble.stopScanning();
-                    this.peripheral = peripheral;
-
-                    peripheral.connect((err) => {
-                        if (err) {
-                            return callback(err);
-                        }
-
-                        this.connected = true;
-                        winston.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
-
-                        peripheral.once('disconnect', () => {
-                            clearInterval(this.runInterval);
-                            this.connected = false;
-                            winston.warn('disconnect peripheral', this.uuid);
-                            this.emit('SBrick.disconnected');
-                            this.removeAllListeners();
-                        });
-
-                        peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
+                        peripheral.connect((err) => {
                             if (err) {
-                                winston.warn('service discovery error', err);
-                                return callback(err);
+                                return reject(err);
                             }
 
-                            winston.info('remote control service found');
+                            this.connected = true;
+                            winston.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
 
-                            services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
-                                winston.info('remote control characteristic found');
-                                this.characteristic = characteristics[0];
-                                return callback(null);
+                            peripheral.once('disconnect', () => {
+                                clearInterval(this.runInterval);
+                                this.connected = false;
+                                this.authenticated = false;
+                                winston.warn('disconnect peripheral', this.uuid);
+                                this.emit('SBrick.disconnected');
+                                this.removeAllListeners();
+                            });
+
+                            peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
+                                if (err) {
+                                    winston.warn('service discovery error', err);
+                                    return reject(err);
+                                }
+
+                                winston.info('remote control service found');
+
+                                services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
+                                    winston.info('remote control characteristic found');
+                                    this.characteristic = characteristics[0];
+                                    return resolve();
+                                });
                             });
                         });
-                    });
-                }
-            });
+                    }
+                });
 
-            noble.startScanning();
-        });
-    }
+                noble.startScanning();
+            });
+        } else {
+            return resolve();
+        }
+    });
 };
 
 SBrick.prototype.disconnect = function () {
@@ -122,7 +116,7 @@ SBrick.prototype.disconnect = function () {
     }
 };
 
-SBrick.prototype.run = function (callback) {
+SBrick.prototype.start = function (password) {
     this.characteristic.on('data', (data, isNotification) => {
         if (isNotification) {
             const voltage = convertToVoltage(data.readUInt16LE(0));
@@ -142,14 +136,37 @@ SBrick.prototype.run = function (callback) {
     });
 
     this.runInterval = setInterval(() => {
-        if (this.connected && this.queue.getQueueLength() === 0) {
+        if (this.connected && this.authenticated && this.queue.getQueueLength() === 0) {
             this.channels.forEach((channel) => {
                 this.queue.add(this.writeCommand(channel.getCommand()));
             });
         }
     }, 200);
 
-    callback(null);
+    return new Promise((resolve, reject) => {
+        this.isAuthenticated()
+            .then((authenticated) => {
+                if (authenticated) {
+                    return resolve();
+                }
+
+                return this.login(0, password).then(resolve).catch(reject);
+            })
+            .catch(reject);
+    });
+};
+
+SBrick.prototype.login = function (userId, password) {
+    return new Promise((resolve, reject) => {
+        this.authenticate(userId, password)
+            //TODO: failed authentication does not return anything!!
+            .then(() => {
+                this.isAuthenticated(userId, password)
+                .then((authenticated) => {
+                    return authenticated ? resolve() : reject('Authentication failed');
+                }).catch(reject);
+            }).catch(reject);
+    });
 };
 
 SBrick.prototype.writeCommand = function (cmd) {
@@ -158,6 +175,7 @@ SBrick.prototype.writeCommand = function (cmd) {
     }
 
     return new Promise((resolve, reject) => {
+        winston.info('write', cmd);
         this.characteristic.write(cmd, false, (err) => {
             if (err) {
                 winston.warn('write error', err, cmd);
@@ -195,7 +213,8 @@ SBrick.prototype.isAuthenticated = function () {
         this.queue.add(() => {
             return this.readCommand('03');
         }).then((data) => {
-            resolve(data.readUInt8(0) === 1);
+            this.authenticated = data.readUInt8(0) === 1;
+            resolve(this.authenticated);
         }).catch(reject);
     });
 };
@@ -213,7 +232,7 @@ SBrick.prototype.getUserId = function () {
 SBrick.prototype.authenticate = function (userId, password) {
     return new Promise((resolve, reject) => {
         if (userId === 0 || userId === 1) {
-            const cmd = '05' + this.generatePassword(password);
+            const cmd = '050' + userId + this.generatePassword(password);
             this.queue.add(() => {
                 return this.writeCommand(cmd);
             }).then(resolve)
@@ -242,7 +261,7 @@ SBrick.prototype.clearPassword = function (userId) {
 SBrick.prototype.setPassword = function (userId, password) {
     return new Promise((resolve, reject) => {
         if (userId === 0 || userId === 1) {
-            const cmd = '07' + this.generatePassword(password);
+            const cmd = '070' + userId + this.generatePassword(password);
             this.queue.add(() => {
                 return this.writeCommand(cmd);
             }).then(resolve)

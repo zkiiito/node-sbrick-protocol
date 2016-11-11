@@ -47,13 +47,9 @@ io.on('connection', function (socket) {
         });
     });
 
-    socket.on('SBrick.connect', (uuid) => {
+    socket.on('SBrick.connect', (uuid, password) => {
         const sbrick = new SBrick(uuid);
-        sbrick.start((err) => {
-            if (err) {
-                return io.emit('SBrick.error', uuid, err);
-            }
-
+        sbrick.connect().then(() => {
             io.emit('SBrick.connected', uuid);
             sbrick.on('SBrick.voltAndTemp', (voltage, temperature) => {
                 io.emit('SBrick.voltAndTemp', uuid, voltage, temperature);
@@ -61,6 +57,10 @@ io.on('connection', function (socket) {
             sbrick.on('SBrick.disconnected', () => {
                 io.emit('SBrick.disconnected', uuid);
             });
+
+            return sbrick.start(password);
+        }).catch((err) => {
+            return io.emit('SBrick.error', uuid, err);
         });
         socket.sbricks[uuid] = sbrick;
     });
