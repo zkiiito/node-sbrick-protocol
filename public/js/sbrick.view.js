@@ -25,6 +25,10 @@ var SBrickView = Backbone.View.extend({
             _this.channelViews.push(channelView);
         });
 
+        if (this.model.get('secured') === false) {
+            this.$('.sbrick-control-panel-passwords').hide();
+        }
+
         this.setButtons();
 
         return this;
@@ -73,6 +77,7 @@ var SBrickView = Backbone.View.extend({
 
     updateModel: function () {
         this.model.set('password', this.$('.sbrick-control-panel-password').val());
+        this.model.save();
     },
 
     connect: function () {

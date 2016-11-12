@@ -36,7 +36,7 @@ io.on('connection', function (socket) {
             socket.sbricks[uuid].disconnect();
         });
 
-        SBrick.scanSBricks((err, sbricks) => {
+        SBrick.scanSBricks().then((sbricks) => {
             async.map(sbricks, (sbrick, callback) => {
                 storage.getItem(sbrick.uuid).then((value) => {
                     callback(null, Object.assign({}, value, sbrick));
@@ -60,7 +60,8 @@ io.on('connection', function (socket) {
 
             return sbrick.start(password);
         }).catch((err) => {
-            return io.emit('SBrick.error', uuid, err);
+            io.emit('SBrick.error', uuid, err);
+            sbrick.disconnect();
         });
         socket.sbricks[uuid] = sbrick;
     });

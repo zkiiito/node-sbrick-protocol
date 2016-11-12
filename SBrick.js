@@ -77,7 +77,7 @@ SBrick.prototype.connect = function () {
                                 clearInterval(this.runInterval);
                                 this.connected = false;
                                 this.authenticated = false;
-                                winston.warn('disconnect peripheral', this.uuid);
+                                winston.warn('disconnected peripheral', this.uuid);
                                 this.emit('SBrick.disconnected');
                                 this.removeAllListeners();
                             });
@@ -88,10 +88,10 @@ SBrick.prototype.connect = function () {
                                     return reject(err);
                                 }
 
-                                winston.info('remote control service found');
+                                winston.verbose('remote control service found');
 
                                 services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
-                                    winston.info('remote control characteristic found');
+                                    winston.verbose('remote control characteristic found');
                                     this.characteristic = characteristics[0];
                                     return resolve();
                                 });
@@ -138,7 +138,9 @@ SBrick.prototype.start = function (password) {
     this.runInterval = setInterval(() => {
         if (this.connected && this.authenticated && this.queue.getQueueLength() === 0) {
             this.channels.forEach((channel) => {
-                this.queue.add(this.writeCommand(channel.getCommand()));
+                this.queue.add(() => {
+                    this.writeCommand(channel.getCommand());
+                });
             });
         }
     }, 200);
@@ -147,6 +149,7 @@ SBrick.prototype.start = function (password) {
         this.isAuthenticated()
             .then((authenticated) => {
                 if (authenticated) {
+                    winston.info('authenticated');
                     return resolve();
                 }
 
@@ -159,13 +162,16 @@ SBrick.prototype.start = function (password) {
 SBrick.prototype.login = function (userId, password) {
     return new Promise((resolve, reject) => {
         this.authenticate(userId, password)
-            //TODO: failed authentication does not return anything!!
             .then(() => {
                 this.isAuthenticated(userId, password)
                 .then((authenticated) => {
-                    return authenticated ? resolve() : reject('Authentication failed');
+                    winston.info('authentication ' + (authenticated ? 'successful' : 'failed'));
+                    return authenticated ? resolve() : reject('authentication failed');
                 }).catch(reject);
-            }).catch(reject);
+            }).catch((err) => {
+                winston.info(err);
+                reject(err);
+            });
     });
 };
 
@@ -175,8 +181,18 @@ SBrick.prototype.writeCommand = function (cmd) {
     }
 
     return new Promise((resolve, reject) => {
-        winston.info('write', cmd);
+        winston.verbose('write', cmd);
+        const now = new Date().getTime();
+
+        // noble does not handle write errors correctly
+        const writeErrorTimeout = setTimeout(() => {
+            winston.warn('write timeout');
+            reject('write timeout');
+        }, 100);
+
         this.characteristic.write(cmd, false, (err) => {
+            winston.debug('write time: ', new Date().getTime() - now);
+            clearTimeout(writeErrorTimeout);
             if (err) {
                 winston.warn('write error', err, cmd);
                 return reject(err);
@@ -190,7 +206,7 @@ SBrick.prototype.readCommand = function (cmd) {
     return new Promise((resolve, reject) => {
         this.writeCommand(cmd).then(() => {
             this.once('SBrick.read', (data) => {
-                winston.info('read', cmd, data);
+                winston.verbose('read', cmd, data);
                 return resolve(data);
             });
             this.characteristic.read(); //trigger extra read, apart from subscribe
@@ -236,7 +252,9 @@ SBrick.prototype.authenticate = function (userId, password) {
             this.queue.add(() => {
                 return this.writeCommand(cmd);
             }).then(resolve)
-            .catch(reject);
+            .catch(() => {
+                reject('authentication failed');
+            });
         } else {
             reject('invalid value: userId');
         }
@@ -246,10 +264,8 @@ SBrick.prototype.authenticate = function (userId, password) {
 SBrick.prototype.clearPassword = function (userId) {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            if (userId === 0) {
-                return this.writeCommand('0600');
-            } else if (userId === 1) {
-                return this.writeCommand('0601');
+            if (userId === 0 || userId === 1) {
+                return this.writeCommand('060' + userId);
             } else {
                 reject('invalid value: userId');
             }
@@ -540,29 +556,32 @@ SBrick.prototype.readUptimeCounter = function () {
     });
 };
 
-SBrick.scanSBricks = function (callback) {
-    winston.info('scanning...');
-    nobleConnected().then(() => {
-        var sbricks = [];
-        noble.on('discover', (peripheral) => {
+SBrick.scanSBricks = function () {
+    return new Promise((resolve, reject) => {
+        winston.info('scanning...');
+        nobleConnected().then(() => {
+            const sbricks = [];
+            noble.on('discover', (peripheral) => {
 
-            try {
-                var sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
-                sbrickdata.uuid = peripheral.uuid;
-                winston.info('SBrick', sbrickdata);
-                sbricks.push(sbrickdata);
-            } catch (err) {
-                winston.info(peripheral.uuid, err);
-            }
-        });
+                try {
+                    var sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
+                    sbrickdata.uuid = peripheral.uuid;
+                    winston.info('SBrick', sbrickdata);
+                    sbricks.push(sbrickdata);
+                } catch (err) {
+                    winston.info(peripheral.uuid, err);
+                }
+            });
 
-        noble.startScanning();
+            noble.startScanning();
 
-        setTimeout(() => {
-            noble.stopScanning();
-            noble.removeAllListeners('discover');
-            callback(null, sbricks);
-        }, 1000);
+            setTimeout(() => {
+                winston.info('scanning finished');
+                noble.stopScanning();
+                noble.removeAllListeners('discover');
+                resolve(sbricks);
+            }, 1000);
+        }).catch(reject);
     });
 };
 
