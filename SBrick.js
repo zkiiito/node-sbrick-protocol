@@ -1,3 +1,10 @@
+/*
+ * node.js driver for SBrick
+ *
+ * Complete protocol documentation can be found here:
+ * https://social.sbrick.com/wiki/view/pageId/11/slug/the-sbrick-ble-protocol
+ */
+
 const noble = require('noble');
 const winston = require('winston');
 const util = require('util');
@@ -7,6 +14,11 @@ const SBrickChannel = require('./SBrickChannel');
 const SBrickAdvertisementData = require('./SBrickAdvertisementData');
 const passwordGenerator = require('./SBrickPasswordGeneratorMD5');
 
+/**
+ * Promise to successful noble conneciton
+ *
+ * @return {Promise}
+ */
 const nobleConnected = function () {
     return new Promise((resolve, reject) => {
         if (noble.state === 'poweredOn') {
@@ -15,6 +27,7 @@ const nobleConnected = function () {
             noble.removeAllListeners('stateChange');
 
             const nobleConnectTimeout = setTimeout(() => {
+                noble.removeAllListeners('stateChange');
                 winston.warn('connect timeout');
                 reject('connect timeout');
             }, 1000);
@@ -59,6 +72,11 @@ util.inherits(SBrick, EventEmitter);
 
 SBrick.prototype.generatePassword = passwordGenerator;
 
+/**
+ * Connect to SBrick
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.connect = function () {
     return new Promise((resolve, reject) => {
         if (!this.connected) {
@@ -123,6 +141,12 @@ SBrick.prototype.disconnect = function () {
     }
 };
 
+/**
+ * Subscribe to main SBrick events, start loop and authenticate.
+ *
+ * @param {string} password - owner password
+ * @return {Promise}
+ */
 SBrick.prototype.start = function (password) {
     this.characteristic.on('data', (data, isNotification) => {
         if (isNotification) {
@@ -166,6 +190,13 @@ SBrick.prototype.start = function (password) {
     });
 };
 
+/**
+ * Login with response
+ *
+ * @param {number} userId - 0: owner, 1: guest
+ * @param {string} password
+ * @return {Promise}
+ */
 SBrick.prototype.login = function (userId, password) {
     return new Promise((resolve, reject) => {
         this.authenticate(userId, password)
@@ -182,6 +213,12 @@ SBrick.prototype.login = function (userId, password) {
     });
 };
 
+/**
+ * Add write command to the queue
+ *
+ * @param {string|Buffer} cmd
+ * @return {Promise}
+ */
 SBrick.prototype.writeCommand = function (cmd) {
     if (!(cmd instanceof Buffer)) {
         cmd = new Buffer(cmd, 'hex');
@@ -209,6 +246,12 @@ SBrick.prototype.writeCommand = function (cmd) {
     });
 };
 
+/**
+ * Add write command to the queue and return with response
+ *
+ * @param {string|Buffer} cmd
+ * @return {Promise}
+ */
 SBrick.prototype.readCommand = function (cmd) {
     return new Promise((resolve, reject) => {
         this.writeCommand(cmd).then(() => {
@@ -221,6 +264,11 @@ SBrick.prototype.readCommand = function (cmd) {
     });
 };
 
+/**
+ * If owner password is set, this will return true.
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.needAuthentication = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -231,6 +279,12 @@ SBrick.prototype.needAuthentication = function () {
     });
 };
 
+/**
+ * Returns wether the current session is authenticated. This will always
+ * return true, if there's no owner password set.
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.isAuthenticated = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -242,6 +296,12 @@ SBrick.prototype.isAuthenticated = function () {
     });
 };
 
+/**
+ * Returns the authenticated user ID. If the user is not authenticated,
+ * then a BLE error is returned.
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.getUserId = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -252,6 +312,14 @@ SBrick.prototype.getUserId = function () {
     });
 };
 
+/**
+ * New sessions are unauthenticated if password set.
+ * New sessions are authenticated if password is not set.
+ *
+ * @param {number} userId - 0: owner, 1: guest
+ * @param {string} password
+ * @return {Promise}
+ */
 SBrick.prototype.authenticate = function (userId, password) {
     return new Promise((resolve, reject) => {
         if (userId === 0 || userId === 1) {
@@ -268,6 +336,17 @@ SBrick.prototype.authenticate = function (userId, password) {
     });
 };
 
+/**
+ * 0: clears owner password. This will 'open' SBrick, anyone
+ * connecting will get owner rights. Guest password will also
+ * be cleared.
+ *
+ * 1: clear only guest password, rendering guests unable to
+ * authenticate
+ *
+ * @param {number} userId - 0: owner, 1: guest
+ * @return {Promise}
+ */
 SBrick.prototype.clearPassword = function (userId) {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -281,6 +360,14 @@ SBrick.prototype.clearPassword = function (userId) {
     });
 };
 
+/**
+ * Guest password can only be set if there is a password set for the
+ * owner too (e.g. 'need authentication?' returns 1)
+ *
+ * @param {number} userId - 0: owner, 1: guest
+ * @param {string} password
+ * @return {Promise}
+ */
 SBrick.prototype.setPassword = function (userId, password) {
     return new Promise((resolve, reject) => {
         if (userId === 0 || userId === 1) {
@@ -295,6 +382,13 @@ SBrick.prototype.setPassword = function (userId, password) {
     });
 };
 
+/**
+ * Sets the authentication timeout. This value is saved to the
+ * persistent store, and loaded at boot time.
+ *
+ * @param {number} timeout - 0.1 seconds x N, minimum 1, maximum 25.5 seconds
+ * @return {Promise}
+ */
 SBrick.prototype.setAuthenticationTimeout = function (timeout) {
     return new Promise((resolve, reject) => {
         if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
@@ -311,6 +405,9 @@ SBrick.prototype.setAuthenticationTimeout = function (timeout) {
     });
 };
 
+/**
+ * @return {Promise}
+ */
 SBrick.prototype.getAuthenticationTimeout = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -321,6 +418,11 @@ SBrick.prototype.getAuthenticationTimeout = function () {
     });
 };
 
+/**
+ * Return: < BRICK ID, 6 byte BlueGiga ID >
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.getBrickID = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -331,9 +433,12 @@ SBrick.prototype.getBrickID = function () {
     });
 };
 
+/*
 //TODO
 SBrick.prototype.quickDriveSetup = function (channels) {};
+*/
 
+/*
 //TODO
 SBrick.prototype.readQuickDriveSetup =  function () {
     return new Promise((resolve, reject) => {
@@ -345,7 +450,20 @@ SBrick.prototype.readQuickDriveSetup =  function () {
         }).catch(reject);
     });
 };
+*/
 
+/**
+ * The purpose of the watchdog is to stop driving in case of an application failure.
+ * Watchdog starts when the first DRIVE command is issued during a connection.
+ * Watchdog is stopped when all channels are either set to zero drive, or are braking.
+ * The value is saved to the persistent store.
+ * The recommended watchdog frequency is 0.2-0.5 seconds, but a smaller and many larger settings are also available.
+ * Writing a zero disables the watchdog.
+ * By default watchdog is set to 5, which means a 0.5 second timeout.
+ *
+ * @param {number} timeout - timeout in 0.1 secs
+ * @return {Promise}
+ */
 SBrick.prototype.setWatchdogTimeout = function (timeout) {
     return new Promise((resolve, reject) => {
         if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
@@ -362,6 +480,9 @@ SBrick.prototype.setWatchdogTimeout = function (timeout) {
     });
 };
 
+/**
+ * @return {Promise}
+ */
 SBrick.prototype.getWatchdogTimeout = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -372,6 +493,13 @@ SBrick.prototype.getWatchdogTimeout = function () {
     });
 };
 
+/**
+ * The ADC channels are read at every 2 seconds. These values are stored
+ * in variables, and this query simply reads those variables. Because of
+ * this, ADC data can be up to 2 seconds old.
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.queryADCVoltage = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -382,6 +510,13 @@ SBrick.prototype.queryADCVoltage = function () {
     });
 };
 
+/**
+ * The ADC channels are read at every 2 seconds. These values are stored
+ * in variables, and this query simply reads those variables. Because of
+ * this, ADC data can be up to 2 seconds old.
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.queryADCTemperature = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -392,9 +527,16 @@ SBrick.prototype.queryADCTemperature = function () {
     });
 };
 
+/*
 //TODO
 SBrick.prototype.sendEvent = function (eventID) {};
+*/
 
+/**
+ * Erase user flash on next reboot (compromises OTA!)
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.eraseUserFlashOnNextReboot = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -404,6 +546,9 @@ SBrick.prototype.eraseUserFlashOnNextReboot = function () {
     });
 };
 
+/**
+ * @return {Promise}
+ */
 SBrick.prototype.reboot = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -414,9 +559,15 @@ SBrick.prototype.reboot = function () {
     });
 };
 
+/*
 //TODO
 SBrick.prototype.brakeWithPWMSupport = function () {};
+*/
 
+/**
+ * @param {number} limit - limit in celsius
+ * @return {Promise}
+ */
 SBrick.prototype.setThermalLimit = function (limit) {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -429,6 +580,9 @@ SBrick.prototype.setThermalLimit = function (limit) {
     });
 };
 
+/**
+ * @return {Promise}
+ */
 SBrick.prototype.readThermalLimit = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -439,12 +593,22 @@ SBrick.prototype.readThermalLimit = function () {
     });
 };
 
+/*
 //TODO
 SBrick.prototype.writeProgram = function (offset, data) {};
+*/
 
+/*
 //TODO
 SBrick.prototype.readProgram = function (offset) {};
+*/
 
+/**
+ * Saves the current program to the upper half of the first flash page, after erasing the whole page.
+ * Interferes with OTA.
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.saveProgram = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -454,6 +618,11 @@ SBrick.prototype.saveProgram = function () {
     });
 };
 
+/**
+ * Erases the first user flash page. The command buffer will remain unaffected.
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.eraseProgram = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -463,12 +632,21 @@ SBrick.prototype.eraseProgram = function () {
     });
 };
 
+/*
 //TODO
 SBrick.prototype.setEvent = function (eventID, offset) {};
+*/
 
+/*
 //TODO
 SBrick.prototype.readEvent = function (eventID) {};
+*/
 
+/**
+ * Saves the event table onto the flash
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.saveEvents = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -478,9 +656,16 @@ SBrick.prototype.saveEvents = function () {
     });
 };
 
+/*
 //TODO
 SBrick.prototype.startProgram = function (address) {};
+*/
 
+/**
+ * Stops the currently running program
+ *
+ * @return {Promise}
+ */
 SBrick.prototype.stopProgram = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -490,20 +675,31 @@ SBrick.prototype.stopProgram = function () {
     });
 };
 
+/*
 //TODO
 SBrick.prototype.setPWMCounterValue = function () {};
+*/
 
+/*
 //TODO
 SBrick.prototype.getPWMCounterValue = function () {};
+*/
 
+/*
 //TODO
 SBrick.prototype.savePWMCounterValue = function () {};
+*/
 
+/*
 //TODO
 SBrick.prototype.getChannelStatus = function () {
     // Return < brake status bits, 1 byte, 1:brake on, 0: brake off > <1 byte direction flags> <5 byte channel drive values from 0 to 4>
 };
+*/
 
+/**
+ * @return {Promise}
+ */
 SBrick.prototype.isGuestPasswordSet = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -514,12 +710,26 @@ SBrick.prototype.isGuestPasswordSet = function () {
     });
 };
 
+/*
 //TODO
 SBrick.prototype.setConnectionParameters = function () {};
+*/
 
+/*
 //TODO
 SBrick.prototype.getConnectionParameters = function () {};
+*/
 
+/**
+ * true : Default: the channel drive values are set to zero, non-braking,
+ * and default '0' direction (clockwise with LEGO motors)
+ *
+ * false: The channels are left in whatever state the controlling application set
+ * them. This option itself is preserved throughout connections.
+ *
+ * @param {boolean} value
+ * @return {Promise}
+ */
 SBrick.prototype.setReleaseOnReset = function (value) {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -533,6 +743,9 @@ SBrick.prototype.setReleaseOnReset = function (value) {
     });
 };
 
+/**
+ * @return {Promise}
+ */
 SBrick.prototype.getReleaseOnReset = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -543,6 +756,9 @@ SBrick.prototype.getReleaseOnReset = function () {
     });
 };
 
+/**
+ * @return {Promise}
+ */
 SBrick.prototype.readPowerCycleCounter = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -553,6 +769,9 @@ SBrick.prototype.readPowerCycleCounter = function () {
     });
 };
 
+/**
+ * @return {Promise}
+ */
 SBrick.prototype.readUptimeCounter = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
@@ -563,6 +782,12 @@ SBrick.prototype.readUptimeCounter = function () {
     });
 };
 
+/**
+ * Scan for SBrick devices
+ * promise returns SBrickAdvertisementData[]
+ *
+ * @return {Promise}
+ */
 SBrick.scanSBricks = function () {
     return new Promise((resolve, reject) => {
         winston.info('scanning...');
