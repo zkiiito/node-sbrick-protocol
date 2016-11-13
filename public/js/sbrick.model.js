@@ -9,7 +9,8 @@ var SBrick = Backbone.Model.extend(
             hwVersion: null,
             secured: false,
             connected: false,
-            password: null
+            password: null,
+            streamUrl: null
         },
         /** @constructs */
         initialize: function () {
@@ -25,6 +26,7 @@ var SBrick = Backbone.Model.extend(
             var json = {
                 uuid: this.get('uuid'),
                 password: this.get('password'),
+                streamUrl: this.get('streamUrl'),
                 channels: this.channels.toJSON(options)
             };
             return json;

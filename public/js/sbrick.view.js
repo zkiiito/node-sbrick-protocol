@@ -4,6 +4,7 @@ var SBrickView = Backbone.View.extend({
 
     events: {
         'blur .sbrick-control-panel-password': 'updateModel',
+        'blur .sbrick-control-panel-stream-url': 'updateModel',
         'click .sbrick-control-panel-connect': 'connect',
         'click .sbrick-control-panel-disconnect': 'disconnect'
     },
@@ -13,6 +14,7 @@ var SBrickView = Backbone.View.extend({
         this.timeline = null;
         this.listenTo(this.model, 'change:connected', this.initChart);
         this.listenTo(this.model, 'change:connected', this.setButtons);
+        this.listenTo(this.model, 'change:streamUrl', this.setStream);
     },
 
     render: function () {
@@ -31,6 +33,7 @@ var SBrickView = Backbone.View.extend({
         }
 
         this.setButtons();
+        this.setStream();
 
         return this;
     },
@@ -72,12 +75,21 @@ var SBrickView = Backbone.View.extend({
         }
     },
 
+    setStream: function () {
+        if (this.model.get('streamUrl')) {
+            this.$('.sbrick-control-panel-stream').attr('src', this.model.get('streamUrl')).show();
+        } else {
+            this.$('.sbrick-control-panel-stream').hide();
+        }
+    },
+
     resizeCanvas: function () {
         this.$('.sbrick-control-panel-chart')[0].width = this.$el.width();
     },
 
     updateModel: function () {
         this.model.set('password', this.$('.sbrick-control-panel-password').val());
+        this.model.set('streamUrl', this.$('.sbrick-control-panel-stream-url').val());
         this.model.save();
     },
 
