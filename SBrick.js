@@ -13,8 +13,15 @@ const nobleConnected = function () {
             resolve();
         } else {
             noble.removeAllListeners('stateChange');
+
+            const nobleConnectTimeout = setTimeout(() => {
+                winston.warn('connect timeout');
+                reject('connect timeout');
+            }, 1000);
+
             noble.on('stateChange', (state) => {
                 if (state === 'poweredOn') {
+                    clearTimeout(nobleConnectTimeout);
                     noble.removeAllListeners('stateChange');
                     resolve();
                 }
