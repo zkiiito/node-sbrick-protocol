@@ -74,6 +74,10 @@ var SBrick = Backbone.Model.extend(
                 this.voltages.clear();
                 this.temperatures.clear();
             }
+        },
+
+        getProxiedStreamUrl: function () {
+            return '/sbricks/' + this.get('uuid') + '/video?rnd=' + Math.random();
         }
     }
 );

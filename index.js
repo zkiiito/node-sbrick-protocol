@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const storage = require('node-persist');
 const async = require('async');
 const Ajv = require('ajv');
+const request = require('request');
 const schema = require('./SBrickSchema');
 
 const ajv = new Ajv();
@@ -26,6 +27,30 @@ app.put('/sbricks/:uuid', function (req, res) {
             res.sendStatus(200);
         });
     }
+});
+
+app.get('/sbricks/:uuid/video', function (req, res) {
+    storage.getItem(req.params.uuid)
+        .then((value) => {
+            if (value) {
+                if (value.streamUrl) {
+                    request
+                        .get(value.streamUrl)
+                        .on('error', function (err) {
+                            console.log(err);
+                        })
+                        .pipe(res);
+                } else {
+                    res.status(400).send('no stream url found');
+                }
+            } else {
+                res.sendStatus(404);
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+            res.send(err);
+        });
 });
 
 io.on('connection', function (socket) {

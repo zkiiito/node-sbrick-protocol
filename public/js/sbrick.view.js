@@ -77,7 +77,7 @@ var SBrickView = Backbone.View.extend({
 
     setStream: function () {
         if (this.model.get('streamUrl')) {
-            this.$('.sbrick-control-panel-stream').attr('src', this.model.get('streamUrl')).show();
+            this.$('.sbrick-control-panel-stream').attr('src', this.model.getProxiedStreamUrl()).show();
         } else {
             this.$('.sbrick-control-panel-stream').hide();
         }
