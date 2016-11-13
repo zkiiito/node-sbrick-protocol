@@ -1,10 +1,11 @@
+/*global Backbone, SBrickChannelView, SmoothieChart, $, _ */
 var SBrickView = Backbone.View.extend({
     template: _.template($('#sbrick-view').text()),
 
     events: {
-        "blur .sbrick-control-panel-password": "updateModel",
-        "click .sbrick-control-panel-connect": "connect",
-        "click .sbrick-control-panel-disconnect": "disconnect"
+        'blur .sbrick-control-panel-password': 'updateModel',
+        'click .sbrick-control-panel-connect': 'connect',
+        'click .sbrick-control-panel-disconnect': 'disconnect'
     },
 
     initialize: function () {

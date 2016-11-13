@@ -1,3 +1,4 @@
+/*global Backbone, keycode, $, _ */
 var SBrickChannelView = Backbone.View.extend({
     template: _.template($('#sbrick-channel-view').text()),
 

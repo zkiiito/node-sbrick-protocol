@@ -1,7 +1,8 @@
-SBrickChannel = Backbone.Model.extend(
+/*global Backbone, keycode */
+var SBrickChannel = Backbone.Model.extend(
     /** @lends SBrickChannel.prototype */
     {
-        idAttribute: "channelId",
+        idAttribute: 'channelId',
         defaults: {
             channelId: null,
             min: -255,
@@ -18,13 +19,13 @@ SBrickChannel = Backbone.Model.extend(
             return {
                 keyIncName: keycode(this.get('keyInc')),
                 keyDecName: keycode(this.get('keyDec'))
-            }
+            };
         }
     }
 );
 
 /** @class */
-SBrickChannelCollection = Backbone.Collection.extend(
+var SBrickChannelCollection = Backbone.Collection.extend(
     /** @lends SBrickChannelCollection.prototype */
     {
         model: SBrickChannel

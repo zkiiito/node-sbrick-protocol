@@ -1,8 +1,9 @@
+/*global Backbone, SBrickCollection, SBrickView, Socket */
 var SBrickControllerView = Backbone.View.extend({
     events: {
-        "keydown": "keydown",
-        "keyup": "keyup",
-        "click #sbrick-list-scan": "scan"
+        'keydown': 'keydown',
+        'keyup': 'keyup',
+        'click #sbrick-list-scan': 'scan'
     },
 
     initialize: function () {

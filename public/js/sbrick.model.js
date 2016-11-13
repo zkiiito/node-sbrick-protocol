@@ -1,8 +1,8 @@
-/*global Backbone, SBrickChannel, SBrickChannelCollection */
+/*global Backbone, SBrickChannel, SBrickChannelCollection, TimeSeries, _ */
 var SBrick = Backbone.Model.extend(
     /** @lends SBrick.prototype */
     {
-        idAttribute: "uuid",
+        idAttribute: 'uuid',
         defaults: {
             uuid: null,
             swVersion: null,
