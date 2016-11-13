@@ -1,7 +1,7 @@
 /*global io, app */
 var Socket = {
     initialize: function () {
-        this.socket = io.connect('http://localhost:8000');
+        this.socket = io.connect(document.location.href);
 
         this.socket.on('SBrick.scanResponse', this.scanResponse);
         this.socket.on('SBrick.connected', this.connected);
