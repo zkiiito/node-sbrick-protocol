@@ -201,7 +201,7 @@ SBrick.prototype.login = function (userId, password) {
     return new Promise((resolve, reject) => {
         this.authenticate(userId, password)
             .then(() => {
-                this.isAuthenticated(userId, password)
+                this.isAuthenticated()
                 .then((authenticated) => {
                     winston.info('authentication ' + (authenticated ? 'successful' : 'failed'));
                     return authenticated ? resolve() : reject('authentication failed');

@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "description": "Control the SBrick from nodejs",
   "main": "index.js",
+  "repository" :  {
+    "type": "git",
+    "url": "https://github.com/zkiiito/node-sbrick-controller.git"
+  },
   "scripts": {
     "start": "node index.js",
     "test": "mocha",
