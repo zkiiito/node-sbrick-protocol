@@ -1,39 +1,53 @@
-# SBrick Controller
-Control your [Lego](https://lego.com) [SBrick](https://www.sbrick.com/) creations from the browser, using your keyboard!
+# SBrick Protocol
+Control your [Lego](https://lego.com) [SBrick](https://www.sbrick.com/) creations from node.js!
 
 ## Requirements
 A device with [node.js](https://nodejs.org/)  and a Bluetooth 4.x adapter, which is supported by [noble](https://github.com/sandeepmistry/noble#prerequisites).
 
 ## Installation
 ```
-git clone git@github.com:zkiiito/node-sbrick-controller.git
-cd node-sbrick-controller
-npm install
-npm start
+npm install sbrick-protocol
 ```
-then, open your browser at http://localhost:8000/
 
-## Project status
-Working from the web UI:
-* scan for SBricks
-* connect/disconnect
-* channel control (drive with keyboard keys)
-* temperature & voltage real time chart
+## Usage
+```
+const SBrick = require('sbrick-protocol');
+var sbrick = null;
 
-Still under development:
-* overall security: to put it on an raspberry PI, and control your creation from anywhere, it needs some :)
-* some video streaming solution - to see where is your creation
-* many SBrick commands implemented, but not available on the UI:
-  * watchdog
-  * thermal limit
-  * release on reset
-  * uptime counter
-  * power cycle counter
-* commands not implemented (yet):
-  * authentication (in progress)
-  * programming
-  * events
-  * connection parameters
-  * PWM counter
-  * quick drive
-* I'm also thinking about separating the SBrick protocol implementation and the web UI.
+//scan for SBricks
+SBrick.scanSBricks()
+    .then((sbricks) => {
+        if (sbricks.length > 0) {
+            //connect to first SBrick
+            sbrick = new SBrick(sbricks[0].uuid);
+            return sbrick.connect();
+        } else {
+            throw new Error('no SBricks found');
+        }
+    })
+    .then(() => {
+        //start sbrick main loop
+        return sbrick.start();
+    })
+    .then(() => {
+        //subscribe to events
+        sbrick.on('SBrick.voltAndTemp', (voltage, temperature) => {
+            console.log('voltage', voltage, 'temperature', temperature);
+        });
+        
+        //set channel 0 to full speed
+        sbrick.channels[0].pwm = 255;
+    })
+    .catch(console.log);
+```
+
+See the complete interface in [SBrick.js](SBrick.js).
+
+A fully functional, browser-based interface also available at [node-sbrick-controller](https://github.com/zkiiito/node-sbrick-controller). 
+
+## Commands not implemented yet
+ * programming
+ * events
+ * connection parameters
+ * PWM counter
+ * quick drive
