@@ -170,7 +170,7 @@ SBrick.prototype.start = function (password) {
         if (this.connected && this.authenticated && this.queue.getQueueLength() === 0) {
             this.channels.forEach((channel) => {
                 this.queue.add(() => {
-                    this.writeCommand(channel.getCommand());
+                    return this.writeCommand(channel.getCommand());
                 });
             });
         }
