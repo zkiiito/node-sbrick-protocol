@@ -80,7 +80,7 @@ SBrick.prototype.generatePassword = passwordGenerator;
 SBrick.prototype.connect = function () {
     return new Promise((resolve, reject) => {
         if (!this.connected) {
-            var found = false; //somehow discover discovered the same sbrick multiple times
+            let found = false; //somehow discover discovered the same sbrick multiple times
             nobleConnected().then(() => {
                 winston.info('scanning for', this.uuid);
                 noble.on('discover', (peripheral) => {
@@ -155,8 +155,6 @@ SBrick.prototype.start = function (password) {
             this.emit('SBrick.voltage', voltage);
             this.emit('SBrick.temperature', temperature);
             this.emit('SBrick.voltAndTemp', voltage, temperature);
-        } else {
-            this.emit('SBrick.read', data);
         }
     });
 
@@ -228,15 +226,8 @@ SBrick.prototype.writeCommand = function (cmd) {
         winston.verbose('write', cmd);
         const now = new Date().getTime();
 
-        // noble does not handle write errors correctly
-        const writeErrorTimeout = setTimeout(() => {
-            winston.warn('write timeout');
-            reject('write timeout');
-        }, 100);
-
         this.characteristic.write(cmd, false, (err) => {
             winston.debug('write time: ', new Date().getTime() - now);
-            clearTimeout(writeErrorTimeout);
             if (err) {
                 winston.warn('write error', err, cmd);
                 return reject(err);
@@ -255,11 +246,10 @@ SBrick.prototype.writeCommand = function (cmd) {
 SBrick.prototype.readCommand = function (cmd) {
     return new Promise((resolve, reject) => {
         this.writeCommand(cmd).then(() => {
-            this.once('SBrick.read', (data) => {
+            this.characteristic.read((err, data) => {
                 winston.verbose('read', cmd, data);
                 return resolve(data);
             });
-            this.characteristic.read(); //trigger extra read, apart from subscribe
         }).catch(reject);
     });
 };
@@ -392,7 +382,7 @@ SBrick.prototype.setPassword = function (userId, password) {
 SBrick.prototype.setAuthenticationTimeout = function (timeout) {
     return new Promise((resolve, reject) => {
         if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
-            var cmd = '08';
+            let cmd = '08';
             cmd += ('00' + timeout.toString(16)).substr(-2);
 
             this.queue.add(() => {
@@ -467,7 +457,7 @@ SBrick.prototype.readQuickDriveSetup =  function () {
 SBrick.prototype.setWatchdogTimeout = function (timeout) {
     return new Promise((resolve, reject) => {
         if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
-            var cmd = '0D';
+            let cmd = '0D';
             cmd += ('00' + timeout.toString(16)).substr(-2);
 
             this.queue.add(() => {
@@ -572,7 +562,7 @@ SBrick.prototype.setThermalLimit = function (limit) {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
             //celsius = ADC / 118.85795 - 160
-            var limitADC = (limit + 160) * 118.85795;
+            let limitADC = (limit + 160) * 118.85795;
             limitADC = ('00' + limitADC.toString(16)).substr(-2);
             return this.writeCommand('14' + limitADC);
         }).then(resolve)

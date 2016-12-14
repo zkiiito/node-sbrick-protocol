@@ -22,7 +22,7 @@
     "bluetooth"
   ],
   "dependencies": {
-    "noble": "^1.7.0",
+    "noble": "zkiiito/noble.git#writeerrors",
     "promise-queue": "^2.2.3",
     "winston": "^2.2.0"
   },
