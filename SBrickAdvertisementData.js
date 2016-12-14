@@ -20,7 +20,9 @@ SBrickAdvertisementData.parse = function (data) {
 
     for (var byte of data) {
         if (i === nextByteLength) {
-            handleSection['s' + curSection](advertisementData, section);
+            if (handleSection['s' + section[0]]) {
+                handleSection['s' + section[0]](advertisementData, section);
+            }
             byteLength = byte;
             nextByteLength = i + byteLength + 1;
             section = [];
@@ -31,14 +33,16 @@ SBrickAdvertisementData.parse = function (data) {
         i++;
     }
 
-    handleSection['s' + curSection](advertisementData, section);
+    if (handleSection['s' + section[0]]) {
+        handleSection['s' + section[0]](advertisementData, section);
+    }
 
     return advertisementData;
 };
 
 const handleSection = {
     //header
-    s1: function (data, bytes) {
+    s152: function (data, bytes) {
         if (bytes[0] !== 152 || bytes[1] !== 1) {
             throw new Error('not SBrick');
         }
@@ -51,7 +55,7 @@ const handleSection = {
      Example 1: 02 00 00 - Product SBrick
      Example 2: 06 00 00 04 00 04 01 - Product SBrick, HW 4.0, FW 4.1
      */
-    s2: function (data, bytes) {
+    s0: function (data, bytes) {
         if (bytes[0] !== 0 || bytes[1] !== 0) {
             throw new Error('not SBrick');
         }
@@ -71,10 +75,8 @@ const handleSection = {
      Example, battery reading '12f0' on SBrick: 04 01 00 12 F0
      Example, temperature reading '12f0': 04 01 0e 12 F0
      */
-    s3: function (data, bytes) {
-        if (bytes[0] !== 1) {
-            throw new Error('not SBrick');
-        }
+    s1: function (data, bytes) {
+
     },
 
     /*
@@ -82,15 +84,11 @@ const handleSection = {
      02 < Device identifier string >
      Example, SBrick device ID: 07 02 0D 23 FC 19 87 63
      */
-    s4: function (data, bytes) {
-        if (bytes[0] === 2) {
-            bytes.shift();
-            data.identifier = bytes.map(function (byte) {
-                return ('00' + byte.toString(16)).substr(-2);
-            }).join(':');
-        } else {
-            throw new Error('not SBrick');
-        }
+    s2: function (data, bytes) {
+        bytes.shift();
+        data.identifier = bytes.map(function (byte) {
+            return ('00' + byte.toString(16)).substr(-2);
+        }).join(':');
     },
 
     /*
@@ -99,12 +97,8 @@ const handleSection = {
      00: Freely accessible
      01: Authentication needed for some functions
      */
-    s5: function (data, bytes) {
-        if (bytes[0] === 3) {
-            data.secured = bytes[1] === 1;
-        } else {
-            throw new Error('not SBrick');
-        }
+    s3: function (data, bytes) {
+        data.secured = bytes[1] === 1;
     }
 };
 
