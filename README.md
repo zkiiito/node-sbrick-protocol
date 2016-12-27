@@ -1,3 +1,5 @@
+![david-dm](https://david-dm.org/zkiiito/node-sbrick-protocol.svg)
+
 # SBrick Protocol
 Control your [Lego](https://lego.com) [SBrick](https://www.sbrick.com/) creations from node.js!
 
