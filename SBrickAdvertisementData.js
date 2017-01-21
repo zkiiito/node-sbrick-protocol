@@ -1,6 +1,6 @@
 const winston = require('winston');
 
-var SBrickAdvertisementData = function () {
+const SBrickAdvertisementData = function () {
     this.uuid = null;
     this.hwVersion = null;
     this.swVersion = null;
@@ -11,14 +11,14 @@ var SBrickAdvertisementData = function () {
 SBrickAdvertisementData.parse = function (data) {
     data = data instanceof Buffer ? data : new Buffer(data, 'hex');
     winston.debug(data.toString('hex'));
-    var i = 0;
-    var byteLength = 0;
-    var nextByteLength = 2;
-    var section = [];
-    var curSection = 1;
-    var advertisementData = new SBrickAdvertisementData();
+    let i = 0;
+    let byteLength = 0;
+    let nextByteLength = 2;
+    let section = [];
+    let curSection = 1;
+    let advertisementData = new SBrickAdvertisementData();
 
-    for (var byte of data) {
+    for (let byte of data) {
         if (i === nextByteLength) {
             if (handleSection['s' + section[0]]) {
                 handleSection['s' + section[0]](advertisementData, section);
