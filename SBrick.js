@@ -3,6 +3,8 @@
  *
  * Complete protocol documentation can be found here:
  * https://social.sbrick.com/wiki/view/pageId/11/slug/the-sbrick-ble-protocol
+ *
+ * Current version supports SBrick Protocol 17
  */
 
 const noble = require('noble');
@@ -56,6 +58,7 @@ function SBrick (uuid) {
     this.connected = false;
     this.characteristic = null;
     this.runInterval = null;
+    this.adcInterval = null;
     this.peripheral = null;
     this.authenticated = false;
     this.queue = new Queue(1, Infinity);
@@ -80,7 +83,7 @@ SBrick.prototype.generatePassword = passwordGenerator;
 SBrick.prototype.connect = function () {
     return new Promise((resolve, reject) => {
         if (!this.connected) {
-            var found = false; //somehow discover discovered the same sbrick multiple times
+            let found = false; //somehow discover discovered the same sbrick multiple times
             nobleConnected().then(() => {
                 winston.info('scanning for', this.uuid);
                 noble.on('discover', (peripheral) => {
@@ -100,6 +103,7 @@ SBrick.prototype.connect = function () {
 
                             peripheral.once('disconnect', () => {
                                 clearInterval(this.runInterval);
+                                clearInterval(this.adcInterval);
                                 this.connected = false;
                                 this.authenticated = false;
                                 winston.warn('disconnected peripheral', this.uuid);
@@ -167,14 +171,31 @@ SBrick.prototype.start = function (password) {
     });
 
     this.runInterval = setInterval(() => {
-        if (this.connected && this.authenticated && this.queue.getQueueLength() === 0) {
-            this.channels.forEach((channel) => {
-                this.queue.add(() => {
-                    return this.writeCommand(channel.getCommand());
+        if (this.connected && this.authenticated) {
+            if (this.queue.getQueueLength() === 0) {
+                this.channels.forEach((channel) => {
+                    this.queue.add(() => {
+                        return this.writeCommand(channel.getCommand());
+                    });
                 });
-            });
+            } else {
+                winston.verbose('queue full');
+            }
         }
     }, 200);
+
+    this.adcInterval = setInterval(() => {
+        this
+            .queryADCVoltage()
+            .then((voltage) => {
+                this.emit('SBrick.voltage', voltage);
+                return this.queryADCTemperature();
+            })
+            .then((temperature) => {
+                this.emit('SBrick.temperature', temperature);
+            })
+            .catch(winston.warn);
+    }, 1100);
 
     return new Promise((resolve, reject) => {
         this.isAuthenticated()
@@ -392,7 +413,7 @@ SBrick.prototype.setPassword = function (userId, password) {
 SBrick.prototype.setAuthenticationTimeout = function (timeout) {
     return new Promise((resolve, reject) => {
         if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
-            var cmd = '08';
+            let cmd = '08';
             cmd += ('00' + timeout.toString(16)).substr(-2);
 
             this.queue.add(() => {
@@ -467,7 +488,7 @@ SBrick.prototype.readQuickDriveSetup =  function () {
 SBrick.prototype.setWatchdogTimeout = function (timeout) {
     return new Promise((resolve, reject) => {
         if (timeout >= 0 && timeout <= 255 && Number.isInteger(timeout)) {
-            var cmd = '0D';
+            let cmd = '0D';
             cmd += ('00' + timeout.toString(16)).substr(-2);
 
             this.queue.add(() => {
@@ -503,7 +524,7 @@ SBrick.prototype.getWatchdogTimeout = function () {
 SBrick.prototype.queryADCVoltage = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand('0F00');
+            return this.readCommand('0F08');
         }).then((data) => {
             resolve(convertToVoltage(data.readUInt16LE(0)));
         }).catch(reject);
@@ -520,17 +541,12 @@ SBrick.prototype.queryADCVoltage = function () {
 SBrick.prototype.queryADCTemperature = function () {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
-            return this.readCommand('0F0E');
+            return this.readCommand('0F09');
         }).then((data) => {
             resolve(convertToCelsius(data.readUInt16LE(0)));
         }).catch(reject);
     });
 };
-
-/*
-//TODO
-SBrick.prototype.sendEvent = function (eventID) {};
-*/
 
 /**
  * Erase user flash on next reboot (compromises OTA!)
@@ -572,7 +588,7 @@ SBrick.prototype.setThermalLimit = function (limit) {
     return new Promise((resolve, reject) => {
         this.queue.add(() => {
             //celsius = ADC / 118.85795 - 160
-            var limitADC = (limit + 160) * 118.85795;
+            let limitADC = (limit + 160) * 118.85795;
             limitADC = ('00' + limitADC.toString(16)).substr(-2);
             return this.writeCommand('14' + limitADC);
         }).then(resolve)
@@ -590,88 +606,6 @@ SBrick.prototype.readThermalLimit = function () {
         }).then((data) => {
             resolve(convertToCelsius(data.readUInt16LE(0)));
         }).catch(reject);
-    });
-};
-
-/*
-//TODO
-SBrick.prototype.writeProgram = function (offset, data) {};
-*/
-
-/*
-//TODO
-SBrick.prototype.readProgram = function (offset) {};
-*/
-
-/**
- * Saves the current program to the upper half of the first flash page, after erasing the whole page.
- * Interferes with OTA.
- *
- * @return {Promise}
- */
-SBrick.prototype.saveProgram = function () {
-    return new Promise((resolve, reject) => {
-        this.queue.add(() => {
-            return this.writeCommand('18');
-        }).then(resolve)
-        .catch(reject);
-    });
-};
-
-/**
- * Erases the first user flash page. The command buffer will remain unaffected.
- *
- * @return {Promise}
- */
-SBrick.prototype.eraseProgram = function () {
-    return new Promise((resolve, reject) => {
-        this.queue.add(() => {
-            return this.writeCommand('19');
-        }).then(resolve)
-        .catch(reject);
-    });
-};
-
-/*
-//TODO
-SBrick.prototype.setEvent = function (eventID, offset) {};
-*/
-
-/*
-//TODO
-SBrick.prototype.readEvent = function (eventID) {};
-*/
-
-/**
- * Saves the event table onto the flash
- *
- * @return {Promise}
- */
-SBrick.prototype.saveEvents = function () {
-    return new Promise((resolve, reject) => {
-        this.queue.add(() => {
-            return this.writeCommand('1C');
-        }).then(resolve)
-        .catch(reject);
-    });
-};
-
-/*
-//TODO
-SBrick.prototype.startProgram = function (address) {};
-*/
-
-/**
- * Stops the currently running program
- *
- * @return {Promise}
- */
-SBrick.prototype.stopProgram = function () {
-    return new Promise((resolve, reject) => {
-        this.queue.add(() => {
-            return this.writeCommand('1E');
-        }).then(resolve)
-        .catch(reject);
     });
 };
 
@@ -783,6 +717,73 @@ SBrick.prototype.readUptimeCounter = function () {
 };
 
 /**
+ * @param {string} deviceName - 10 char ascii
+ * @return {Promise}
+ */
+SBrick.prototype.setDeviceName = function (deviceName) {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            deviceName = deviceName.replace(/[^a-z0-9]/gi, '').substr(0, 10);
+            deviceName = Buffer.from(deviceName, 'ascii').toString('hex');
+            return this.writeCommand('2A' + deviceName);
+        }).then(resolve)
+        .catch(reject);
+    });
+};
+
+/**
+ * @return {Promise}
+ */
+SBrick.prototype.getDeviceName = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand('2B');
+        }).then((data) => {
+            resolve(data.toString('ascii'));
+        }).catch(reject);
+    });
+};
+
+SBrick.prototype.setupPeriodicVoltageMeasurement = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.writeCommand('2C0809');
+        }).then(resolve)
+        .catch(reject);
+    });
+};
+
+SBrick.prototype.getVoltageMeasurementSetup = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand('2D');
+        }).then((data) => {
+            resolve(data.toString('hex'));
+        }).catch(reject);
+    });
+};
+
+
+SBrick.prototype.setupPeriodicVoltageNotifications = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.writeCommand('2E0809');
+        }).then(resolve)
+        .catch(reject);
+    });
+};
+
+SBrick.prototype.getVoltageNotificationSetup = function () {
+    return new Promise((resolve, reject) => {
+        this.queue.add(() => {
+            return this.readCommand('2F');
+        }).then((data) => {
+            resolve(data.toString('hex'));
+        }).catch(reject);
+    });
+};
+
+/**
  * Scan for SBrick devices
  * promise returns SBrickAdvertisementData[]
  *
@@ -796,7 +797,7 @@ SBrick.scanSBricks = function () {
             noble.on('discover', (peripheral) => {
 
                 try {
-                    var sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
+                    let sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
                     sbrickdata.uuid = peripheral.uuid;
                     winston.info('SBrick', sbrickdata);
                     sbricks.push(sbrickdata);
