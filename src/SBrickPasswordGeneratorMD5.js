@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+const md5 = require('md5');
 
 /**
  * Creates 8-bype password hash, using the first half of md5 hash.
@@ -8,6 +8,6 @@ const crypto = require('crypto');
  */
 module.exports = function (password) {
     password = password || '';
-    const passwordMD5 = crypto.createHash('md5').update(password).digest('hex');
+    const passwordMD5 = md5(password);
     return passwordMD5.substr(0, 16);
 };

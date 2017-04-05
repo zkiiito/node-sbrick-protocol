@@ -23,6 +23,7 @@
     "bluetooth"
   ],
   "dependencies": {
+    "md5": "^2.2.1",
     "noble": "^1.8.0",
     "promise-queue": "^2.2.3",
     "winston": "^2.2.0"
