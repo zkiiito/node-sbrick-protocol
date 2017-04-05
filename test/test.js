@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const SBrickChannelAdvertismentData = require('../SBrickAdvertisementData');
+const SBrickChannelAdvertismentData = require('../src/SBrickAdvertisementData');
 
 describe('SBrickChannelAdvertismentData', function () {
     describe('#parse()', function () {

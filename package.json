@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/zkiiito/node-sbrick-protocol/issues"
   },
-  "main": "./SBrick.js",
+  "main": "./src/SBrick.js",
   "scripts": {
     "test": "mocha"
   },

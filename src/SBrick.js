@@ -7,7 +7,7 @@
  * Current version supports SBrick Protocol 17
  */
 
-const noble = require('noble');
+const noble = require('noble/with-bindings')(require('noble/lib/webbluetooth/bindings'));
 const winston = require('winston');
 const util = require('util');
 const EventEmitter = require('events').EventEmitter;
