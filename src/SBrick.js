@@ -92,10 +92,11 @@ SBrick.prototype.connect = function () {
                 console.log('scanning for', this.uuid);
                 noble.on('discover', (peripheral) => {
                     console.log('found', peripheral.uuid);
-                    if (!found && peripheral.uuid === this.uuid) {
+                    if (!found && (this.uuid === peripheral.uuid || this.uuid === 'webbluetooth')) {
                         found = true;
                         noble.stopScanning();
                         this.peripheral = peripheral;
+                        this.uuid = peripheral.uuid;
 
                         peripheral.connect((err) => {
                             if (err) {
@@ -133,7 +134,13 @@ SBrick.prototype.connect = function () {
                     }
                 });
 
-                noble.startScanning();
+                if (this.uuid === 'webbluetooth') {
+                    noble.startScanning({
+                        optionalServices: '4dc591b0857c41deb5f115abda665b0c'
+                    });
+                } else {
+                    noble.startScanning();
+                }
             });
         } else {
             return resolve();
