@@ -23,12 +23,14 @@
     "bluetooth"
   ],
   "dependencies": {
+    "detect-node": "^2.0.3",
     "md5": "^2.2.1",
     "noble": "zkiiito/noble.git#webbluetooth-optionalservices",
     "promise-queue": "^2.2.3",
     "winston": "^2.2.0"
   },
   "devDependencies": {
+    "loglevel": "^1.4.1",
     "mocha": "^3.0.2",
     "webpack": "^2.3.3"
   }

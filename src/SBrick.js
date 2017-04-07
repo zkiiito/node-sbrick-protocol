@@ -7,8 +7,9 @@
  * Current version supports SBrick Protocol 17
  */
 
-const noble = typeof process !== "undefined" ? require('noble') : require('noble/with-bindings')(require('noble/lib/webbluetooth/bindings'));
-//const winston = require('winston');
+const isNode = require('detect-node');
+const noble = isNode ? require('noble') : require('noble/with-bindings')(require('noble/lib/webbluetooth/bindings'));
+const logger = isNode ? require('winston') : require('loglevel');
 const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const Queue = require('promise-queue');
@@ -30,7 +31,7 @@ const nobleConnected = function () {
 
             const nobleConnectTimeout = setTimeout(() => {
                 noble.removeAllListeners('stateChange');
-                console.log('connect timeout');
+                logger.warn('connect timeout');
                 reject('connect timeout');
             }, 1000);
 
@@ -89,9 +90,9 @@ SBrick.prototype.connect = function () {
         if (!this.connected) {
             let found = false; //somehow discover discovered the same sbrick multiple times
             nobleConnected().then(() => {
-                console.log('scanning for', this.uuid);
+                logger.info('scanning for', this.uuid);
                 noble.on('discover', (peripheral) => {
-                    console.log('found', peripheral.uuid);
+                    logger.info('found', peripheral.uuid);
                     if (!found && (this.uuid === peripheral.uuid || this.uuid === 'webbluetooth')) {
                         found = true;
                         noble.stopScanning();
@@ -104,28 +105,28 @@ SBrick.prototype.connect = function () {
                             }
 
                             this.connected = true;
-                            console.log('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
+                            logger.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
 
                             peripheral.once('disconnect', () => {
                                 clearInterval(this.runInterval);
                                 clearInterval(this.adcInterval);
                                 this.connected = false;
                                 this.authenticated = false;
-                                console.log('disconnected peripheral', this.uuid);
+                                logger.warn('disconnected peripheral', this.uuid);
                                 this.emit('SBrick.disconnected');
                                 this.removeAllListeners();
                             });
 
                             peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
                                 if (err) {
-                                    console.log('service discovery error', err);
+                                    logger.warn('service discovery error', err);
                                     return reject(err);
                                 }
 
-                                console.log('remote control service found');
+                                logger.debug('remote control service found');
 
                                 services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
-                                    console.log('remote control characteristic found');
+                                    logger.debug('remote control characteristic found');
                                     this.characteristic = characteristics[0];
                                     return resolve();
                                 });
@@ -177,7 +178,7 @@ SBrick.prototype.start = function (password) {
 
     this.characteristic.subscribe((err) => {
         if (err) {
-            console.log('subscribe error', err);
+            logger.warn('subscribe error', err);
         }
     });
 
@@ -190,7 +191,7 @@ SBrick.prototype.start = function (password) {
                     });
                 });
             } else {
-                console.log('queue full');
+                logger.debug('queue full');
             }
         }
     }, 200);
@@ -205,13 +206,13 @@ SBrick.prototype.start = function (password) {
             .then((temperature) => {
                 this.emit('SBrick.temperature', temperature);
             })
-            .catch(console.log);
+            .catch(logger.warn);
     }, 1100);
 
     return this.isAuthenticated()
         .then((authenticated) => {
             if (authenticated) {
-                console.log('authenticated');
+                logger.info('authenticated');
                 return true;
             }
 
@@ -232,7 +233,7 @@ SBrick.prototype.login = function (userId, password) {
             return this.isAuthenticated();
         })
         .then((authenticated) => {
-            console.log('authentication ' + (authenticated ? 'successful' : 'failed'));
+            logger.info('authentication ' + (authenticated ? 'successful' : 'failed'));
             return authenticated ? true : Promise.reject('authentication failed');
         });
 };
@@ -249,20 +250,20 @@ SBrick.prototype.writeCommand = function (cmd) {
     }
 
     return new Promise((resolve, reject) => {
-        console.log('write', cmd);
+        logger.debug('write', cmd);
         const now = new Date().getTime();
 
         // noble does not handle write errors correctly
         const writeErrorTimeout = setTimeout(() => {
-            console.log('write timeout');
+            logger.warn('write timeout');
             reject('write timeout');
         }, 100);
 
         this.characteristic.write(cmd, false, (err) => {
-            console.log('write time: ', new Date().getTime() - now);
+            logger.debug('write time: ', new Date().getTime() - now);
             clearTimeout(writeErrorTimeout);
             if (err) {
-                console.log('write error', err, cmd);
+                logger.warn('write error', err, cmd);
                 return reject(err);
             }
             resolve();
@@ -280,7 +281,7 @@ SBrick.prototype.readCommand = function (cmd) {
     return new Promise((resolve, reject) => {
         this.writeCommand(cmd).then(() => {
             this.once('SBrick.read', (data) => {
-                console.log('read', cmd, data);
+                logger.debug('read', cmd, data);
                 return resolve(data);
             });
             this.characteristic.read(); //trigger extra read, apart from subscribe
@@ -727,7 +728,7 @@ SBrick.prototype.getVoltageNotificationSetup = function () {
  */
 SBrick.scanSBricks = function () {
     return new Promise((resolve, reject) => {
-        console.log('scanning...');
+        logger.info('scanning...');
         nobleConnected().then(() => {
             const sbricks = [];
             noble.on('discover', (peripheral) => {
@@ -735,17 +736,17 @@ SBrick.scanSBricks = function () {
                 try {
                     let sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
                     sbrickdata.uuid = peripheral.uuid;
-                    console.log('SBrick', sbrickdata);
+                    logger.info('SBrick', sbrickdata);
                     sbricks.push(sbrickdata);
                 } catch (err) {
-                    console.log(peripheral.uuid, err);
+                    logger.info(peripheral.uuid, err);
                 }
             });
 
             noble.startScanning();
 
             setTimeout(() => {
-                console.log('scanning finished');
+                logger.info('scanning finished');
                 noble.stopScanning();
                 noble.removeAllListeners('discover');
                 resolve(sbricks);

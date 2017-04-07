@@ -1,4 +1,5 @@
-//const winston = require('winston');
+const isNode = require('detect-node');
+const logger = isNode ? require('winston') : require('loglevel');
 
 const SBrickAdvertisementData = function () {
     this.uuid = null;
@@ -10,7 +11,7 @@ const SBrickAdvertisementData = function () {
 
 SBrickAdvertisementData.parse = function (data) {
     data = data instanceof Buffer ? data : new Buffer(data, 'hex');
-//    winston.debug(data.toString('hex'));
+    logger.debug(data.toString('hex'));
     let i = 0;
     let byteLength = 0;
     let nextByteLength = 2;

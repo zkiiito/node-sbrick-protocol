@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 38);
+/******/ 	return __webpack_require__(__webpack_require__.s = 37);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -81,9 +81,9 @@
 
 
 
-var base64 = __webpack_require__(24)
-var ieee754 = __webpack_require__(26)
-var isArray = __webpack_require__(28)
+var base64 = __webpack_require__(11)
+var ieee754 = __webpack_require__(14)
+var isArray = __webpack_require__(16)
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -1861,7 +1861,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ }),
 /* 1 */
@@ -2700,7 +2700,7 @@ function isPrimitive(arg) {
 }
 exports.isPrimitive = isPrimitive;
 
-exports.isBuffer = __webpack_require__(34);
+exports.isBuffer = __webpack_require__(33);
 
 function objectToString(o) {
   return Object.prototype.toString.call(o);
@@ -2744,7 +2744,7 @@ exports.log = function() {
  *     prototype.
  * @param {function} superCtor Constructor function to inherit prototype from.
  */
-exports.inherits = __webpack_require__(33);
+exports.inherits = __webpack_require__(32);
 
 exports._extend = function(origin, add) {
   // Don't do anything if add isn't an object
@@ -2762,7 +2762,7 @@ function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5), __webpack_require__(4)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(5)))
 
 /***/ }),
 /* 3 */
@@ -2775,7 +2775,7 @@ function hasOwnProperty(obj, prop) {
  * Expose `debug()` as the module.
  */
 
-exports = module.exports = __webpack_require__(20);
+exports = module.exports = __webpack_require__(13);
 exports.log = log;
 exports.formatArgs = formatArgs;
 exports.save = save;
@@ -2940,6 +2940,33 @@ function localstorage(){
 
 /***/ }),
 /* 4 */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1,eval)("this");
+} catch(e) {
+	// This works if the window reference is available
+	if(typeof window === "object")
+		g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+
+/***/ }),
+/* 5 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -3125,883 +3152,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 5 */
-/***/ (function(module, exports) {
-
-var g;
-
-// This works in non-strict mode
-g = (function() {
-	return this;
-})();
-
-try {
-	// This works if eval is allowed (see CSP)
-	g = g || Function("return this")() || (1,eval)("this");
-} catch(e) {
-	// This works if the window reference is available
-	if(typeof window === "object")
-		g = window;
-}
-
-// g can still be undefined, but nothing to do about it...
-// We return undefined, instead of nothing here, so it's
-// easier to handle this case. if(!global) { ...}
-
-module.exports = g;
-
-
-/***/ }),
 /* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var debug = __webpack_require__(3)('noble');
-
-var events = __webpack_require__(1);
-var util = __webpack_require__(2);
-
-var Peripheral = __webpack_require__(15);
-var Service = __webpack_require__(17);
-var Characteristic = __webpack_require__(11);
-var Descriptor = __webpack_require__(13);
-
-function Noble(bindings) {
-  this.state = 'unknown';
-  this.address = 'unknown';
-
-  this._bindings = bindings;
-  this._peripherals = {};
-  this._services = {};
-  this._characteristics = {};
-  this._descriptors = {};
-  this._discoveredPeripheralUUids = [];
-
-  this._bindings.on('stateChange', this.onStateChange.bind(this));
-  this._bindings.on('addressChange', this.onAddressChange.bind(this));
-  this._bindings.on('scanStart', this.onScanStart.bind(this));
-  this._bindings.on('scanStop', this.onScanStop.bind(this));
-  this._bindings.on('discover', this.onDiscover.bind(this));
-  this._bindings.on('connect', this.onConnect.bind(this));
-  this._bindings.on('disconnect', this.onDisconnect.bind(this));
-  this._bindings.on('rssiUpdate', this.onRssiUpdate.bind(this));
-  this._bindings.on('servicesDiscover', this.onServicesDiscover.bind(this));
-  this._bindings.on('includedServicesDiscover', this.onIncludedServicesDiscover.bind(this));
-  this._bindings.on('characteristicsDiscover', this.onCharacteristicsDiscover.bind(this));
-  this._bindings.on('read', this.onRead.bind(this));
-  this._bindings.on('write', this.onWrite.bind(this));
-  this._bindings.on('broadcast', this.onBroadcast.bind(this));
-  this._bindings.on('notify', this.onNotify.bind(this));
-  this._bindings.on('descriptorsDiscover', this.onDescriptorsDiscover.bind(this));
-  this._bindings.on('valueRead', this.onValueRead.bind(this));
-  this._bindings.on('valueWrite', this.onValueWrite.bind(this));
-  this._bindings.on('handleRead', this.onHandleRead.bind(this));
-  this._bindings.on('handleWrite', this.onHandleWrite.bind(this));
-  this._bindings.on('handleNotify', this.onHandleNotify.bind(this));
-
-  this.on('warning', function(message) {
-    if (this.listeners('warning').length === 1) {
-      console.warn('noble: ' + message);
-    }
-  }.bind(this));
-
-  this._bindings.init();
-}
-
-util.inherits(Noble, events.EventEmitter);
-
-Noble.prototype.onStateChange = function(state) {
-  debug('stateChange ' + state);
-
-  this.state = state;
-
-  this.emit('stateChange', state);
-};
-
-Noble.prototype.onAddressChange = function(address) {
-  debug('addressChange ' + address);
-
-  this.address = address;
-};
-
-Noble.prototype.startScanning = function(serviceUuids, allowDuplicates, callback) {
-  if (this.state !== 'poweredOn') {
-    var error = new Error('Could not start scanning, state is ' + this.state + ' (not poweredOn)');
-
-    if (typeof callback === 'function') {
-      callback(error);
-    } else {
-      throw error;
-    }
-  } else {
-    if (callback) {
-      this.once('scanStart', function(filterDuplicates) {
-        callback(null, filterDuplicates);
-      });
-    }
-
-    this._discoveredPeripheralUUids = [];
-    this._allowDuplicates = allowDuplicates;
-
-    this._bindings.startScanning(serviceUuids, allowDuplicates);
-  }
-};
-
-Noble.prototype.onScanStart = function(filterDuplicates) {
-  debug('scanStart');
-  this.emit('scanStart', filterDuplicates);
-};
-
-Noble.prototype.stopScanning = function(callback) {
-  if (callback) {
-    this.once('scanStop', callback);
-  }
-  this._bindings.stopScanning();
-};
-
-Noble.prototype.onScanStop = function() {
-  debug('scanStop');
-  this.emit('scanStop');
-};
-
-Noble.prototype.onDiscover = function(uuid, address, addressType, connectable, advertisement, rssi) {
-  var peripheral = this._peripherals[uuid];
-
-  if (!peripheral) {
-    peripheral = new Peripheral(this, uuid, address, addressType, connectable, advertisement, rssi);
-
-    this._peripherals[uuid] = peripheral;
-    this._services[uuid] = {};
-    this._characteristics[uuid] = {};
-    this._descriptors[uuid] = {};
-  } else {
-    // "or" the advertisment data with existing
-    for (var i in advertisement) {
-      if (advertisement[i] !== undefined) {
-        peripheral.advertisement[i] = advertisement[i];
-      }
-    }
-
-    peripheral.rssi = rssi;
-  }
-
-  var previouslyDiscoverd = (this._discoveredPeripheralUUids.indexOf(uuid) !== -1);
-
-  if (!previouslyDiscoverd) {
-    this._discoveredPeripheralUUids.push(uuid);
-  }
-
-  if (this._allowDuplicates || !previouslyDiscoverd) {
-    this.emit('discover', peripheral);
-  }
-};
-
-Noble.prototype.connect = function(peripheralUuid) {
-  this._bindings.connect(peripheralUuid);
-};
-
-Noble.prototype.onConnect = function(peripheralUuid, error) {
-  var peripheral = this._peripherals[peripheralUuid];
-
-  if (peripheral) {
-    peripheral.state = error ? 'error' : 'connected';
-    peripheral.emit('connect', error);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' connected!');
-  }
-};
-
-Noble.prototype.disconnect = function(peripheralUuid) {
-  this._bindings.disconnect(peripheralUuid);
-};
-
-Noble.prototype.onDisconnect = function(peripheralUuid) {
-  var peripheral = this._peripherals[peripheralUuid];
-
-  if (peripheral) {
-    peripheral.state = 'disconnected';
-    peripheral.emit('disconnect');
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' disconnected!');
-  }
-};
-
-Noble.prototype.updateRssi = function(peripheralUuid) {
-  this._bindings.updateRssi(peripheralUuid);
-};
-
-Noble.prototype.onRssiUpdate = function(peripheralUuid, rssi) {
-  var peripheral = this._peripherals[peripheralUuid];
-
-  if (peripheral) {
-    peripheral.rssi = rssi;
-
-    peripheral.emit('rssiUpdate', rssi);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' RSSI update!');
-  }
-};
-
-Noble.prototype.discoverServices = function(peripheralUuid, uuids) {
-  this._bindings.discoverServices(peripheralUuid, uuids);
-};
-
-Noble.prototype.onServicesDiscover = function(peripheralUuid, serviceUuids) {
-  var peripheral = this._peripherals[peripheralUuid];
-
-  if (peripheral) {
-    var services = [];
-
-    for (var i = 0; i < serviceUuids.length; i++) {
-      var serviceUuid = serviceUuids[i];
-      var service = new Service(this, peripheralUuid, serviceUuid);
-
-      this._services[peripheralUuid][serviceUuid] = service;
-      this._characteristics[peripheralUuid][serviceUuid] = {};
-      this._descriptors[peripheralUuid][serviceUuid] = {};
-
-      services.push(service);
-    }
-
-    peripheral.services = services;
-
-    peripheral.emit('servicesDiscover', services);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' services discover!');
-  }
-};
-
-Noble.prototype.discoverIncludedServices = function(peripheralUuid, serviceUuid, serviceUuids) {
-  this._bindings.discoverIncludedServices(peripheralUuid, serviceUuid, serviceUuids);
-};
-
-Noble.prototype.onIncludedServicesDiscover = function(peripheralUuid, serviceUuid, includedServiceUuids) {
-  var service = this._services[peripheralUuid][serviceUuid];
-
-  if (service) {
-    service.includedServiceUuids = includedServiceUuids;
-
-    service.emit('includedServicesDiscover', includedServiceUuids);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ' included services discover!');
-  }
-};
-
-Noble.prototype.discoverCharacteristics = function(peripheralUuid, serviceUuid, characteristicUuids) {
-  this._bindings.discoverCharacteristics(peripheralUuid, serviceUuid, characteristicUuids);
-};
-
-Noble.prototype.onCharacteristicsDiscover = function(peripheralUuid, serviceUuid, characteristics) {
-  var service = this._services[peripheralUuid][serviceUuid];
-
-  if (service) {
-    var characteristics_ = [];
-
-    for (var i = 0; i < characteristics.length; i++) {
-      var characteristicUuid = characteristics[i].uuid;
-
-      var characteristic = new Characteristic(
-                                this,
-                                peripheralUuid,
-                                serviceUuid,
-                                characteristicUuid,
-                                characteristics[i].properties
-                            );
-
-      this._characteristics[peripheralUuid][serviceUuid][characteristicUuid] = characteristic;
-      this._descriptors[peripheralUuid][serviceUuid][characteristicUuid] = {};
-
-      characteristics_.push(characteristic);
-    }
-
-    service.characteristics = characteristics_;
-
-    service.emit('characteristicsDiscover', characteristics_);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ' characteristics discover!');
-  }
-};
-
-Noble.prototype.read = function(peripheralUuid, serviceUuid, characteristicUuid) {
-   this._bindings.read(peripheralUuid, serviceUuid, characteristicUuid);
-};
-
-Noble.prototype.onRead = function(peripheralUuid, serviceUuid, characteristicUuid, data, isNotification) {
-  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
-
-  if (characteristic) {
-    characteristic.emit('data', data, isNotification);
-
-    if (!isNotification) {
-      characteristic.emit('read', data, isNotification); // for backwards compatbility
-    }
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' read!');
-  }
-};
-
-Noble.prototype.write = function(peripheralUuid, serviceUuid, characteristicUuid, data, withoutResponse) {
-   this._bindings.write(peripheralUuid, serviceUuid, characteristicUuid, data, withoutResponse);
-};
-
-Noble.prototype.onWrite = function(peripheralUuid, serviceUuid, characteristicUuid) {
-  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
-
-  if (characteristic) {
-    characteristic.emit('write');
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' write!');
-  }
-};
-
-Noble.prototype.broadcast = function(peripheralUuid, serviceUuid, characteristicUuid, broadcast) {
-   this._bindings.broadcast(peripheralUuid, serviceUuid, characteristicUuid, broadcast);
-};
-
-Noble.prototype.onBroadcast = function(peripheralUuid, serviceUuid, characteristicUuid, state) {
-  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
-
-  if (characteristic) {
-    characteristic.emit('broadcast', state);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' broadcast!');
-  }
-};
-
-Noble.prototype.notify = function(peripheralUuid, serviceUuid, characteristicUuid, notify) {
-   this._bindings.notify(peripheralUuid, serviceUuid, characteristicUuid, notify);
-};
-
-Noble.prototype.onNotify = function(peripheralUuid, serviceUuid, characteristicUuid, state) {
-  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
-
-  if (characteristic) {
-    characteristic.emit('notify', state);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' notify!');
-  }
-};
-
-Noble.prototype.discoverDescriptors = function(peripheralUuid, serviceUuid, characteristicUuid) {
-  this._bindings.discoverDescriptors(peripheralUuid, serviceUuid, characteristicUuid);
-};
-
-Noble.prototype.onDescriptorsDiscover = function(peripheralUuid, serviceUuid, characteristicUuid, descriptors) {
-  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
-
-  if (characteristic) {
-    var descriptors_ = [];
-
-    for (var i = 0; i < descriptors.length; i++) {
-      var descriptorUuid = descriptors[i];
-
-      var descriptor = new Descriptor(
-                            this,
-                            peripheralUuid,
-                            serviceUuid,
-                            characteristicUuid,
-                            descriptorUuid
-                        );
-
-      this._descriptors[peripheralUuid][serviceUuid][characteristicUuid][descriptorUuid] = descriptor;
-
-      descriptors_.push(descriptor);
-    }
-
-    characteristic.descriptors = descriptors_;
-
-    characteristic.emit('descriptorsDiscover', descriptors_);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' descriptors discover!');
-  }
-};
-
-Noble.prototype.readValue = function(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid) {
-  this._bindings.readValue(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid);
-};
-
-Noble.prototype.onValueRead = function(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid, data) {
-  var descriptor = this._descriptors[peripheralUuid][serviceUuid][characteristicUuid][descriptorUuid];
-
-  if (descriptor) {
-    descriptor.emit('valueRead', data);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ', ' + descriptorUuid + ' value read!');
-  }
-};
-
-Noble.prototype.writeValue = function(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid, data) {
-  this._bindings.writeValue(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid, data);
-};
-
-Noble.prototype.onValueWrite = function(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid) {
-  var descriptor = this._descriptors[peripheralUuid][serviceUuid][characteristicUuid][descriptorUuid];
-
-  if (descriptor) {
-    descriptor.emit('valueWrite');
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ', ' + descriptorUuid + ' value write!');
-  }
-};
-
-Noble.prototype.readHandle = function(peripheralUuid, handle) {
-  this._bindings.readHandle(peripheralUuid, handle);
-};
-
-Noble.prototype.onHandleRead = function(peripheralUuid, handle, data) {
-  var peripheral = this._peripherals[peripheralUuid];
-
-  if (peripheral) {
-    peripheral.emit('handleRead' + handle, data);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' handle read!');
-  }
-};
-
-Noble.prototype.writeHandle = function(peripheralUuid, handle, data, withoutResponse) {
-  this._bindings.writeHandle(peripheralUuid, handle, data, withoutResponse);
-};
-
-Noble.prototype.onHandleWrite = function(peripheralUuid, handle) {
-  var peripheral = this._peripherals[peripheralUuid];
-
-  if (peripheral) {
-    peripheral.emit('handleWrite' + handle);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' handle write!');
-  }
-};
-
-Noble.prototype.onHandleNotify = function(peripheralUuid, handle, data) {
-  var peripheral = this._peripherals[peripheralUuid];
-
-  if (peripheral) {
-    peripheral.emit('handleNotify', handle, data);
-  } else {
-    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' handle notify!');
-  }
-};
-
-module.exports = Noble;
-
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/* WEBPACK VAR INJECTION */(function(process, Buffer) {var util = __webpack_require__(2);
-var events = __webpack_require__(1);
-
-var debug = __webpack_require__(3)('webble-bindings');
-
-function makeList(uuid){
-  return {services:[ uuid ]};
-}
-
-function addDashes(uuid){
-  if(!uuid || typeof uuid !== 'string'){
-    return uuid;
-  }
-  if(uuid && uuid.length === 32){
-    uuid = uuid.substring(0,8) + '-' + uuid.substring(8,12) + '-' +  uuid.substring(12,16) + '-' +  uuid.substring(16,20) + '-' +  uuid.substring(20);
-  }
-  return uuid.toLowerCase();
-}
-
-function stripDashes(uuid){
-  if(typeof uuid === 'string'){
-    uuid = uuid.split('-').join('');
-  }
-  return uuid;
-}
-
-function formatService(service){
-  //web bluetooth requires 4 char hex service names to be passed in as integers
-  if(typeof service === 'string' && service.length === 4){
-    service = parseInt('0x' + service);
-  }
-  else if(typeof service === 'string' && service.length === 6 && service.indexOf('0x') === 0){
-    service = parseInt(service);
-  }
-  return service;
-}
-
-var NobleBindings = function() {
-
-  this._ble = null;
-  this._startScanCommand = null;
-  this._peripherals = {};
-
-  var self = this;
-
-};
-util.inherits(NobleBindings, events.EventEmitter);
-
-NobleBindings.prototype.init = function(ble) {
-
-  if(ble) {
-    this._ble = ble;
-  }else {
-    this._ble = navigator.bluetooth;
-  }
-
-  var self = this;
-  process.nextTick(function(){
-    debug('initing');
-    if(!self._ble){
-      return self.emit('error', new Error('This browser does not support WebBluetooth.'));
-    }
-    debug('emit powered on');
-    self.emit('stateChange', 'poweredOn');
-  });
-};
-
-
-NobleBindings.prototype.onOpen = function() {
-  debug('on -> open');
-};
-
-NobleBindings.prototype.onClose = function() {
-  debug('on -> close');
-
-  this.emit('stateChange', 'poweredOff');
-};
-
-NobleBindings.prototype.startScanning = function(options, allowDuplicates) {
-  var self = this;
-
-  if(Array.isArray(options)){
-    options = {services: options};
-  }
-
-  if(typeof options !== 'object'){
-    options = {services: options};
-  }
-
-  if(options.services && !Array.isArray(options.services)){
-    options.services = [options.services];
-  }
-
-  var request = {};
-
-  if(options.services || options.name || options.namePrefix) {
-    options.services = options.services.map(formatService);
-
-    var dashedUuids = options.services.map(addDashes);
-
-    var filterList = dashedUuids.map(makeList);
-    if(options.name) {
-      filterList.push({name: options.name});
-    }
-    if(options.namePrefix) {
-      filterList.push({namePrefix: options.namePrefix});
-    }
-    request.filters = filterList;
-  } else {
-    request.acceptAllDevices = true;
-  }
-
-  if(options.optionalServices) {
-    if(!Array.isArray(options.optionalServices)){
-      options.optionalServices = [options.optionalServices];
-    }
-    options.optionalServices = options.optionalServices.map(formatService);
-    request.optionalServices = options.optionalServices.map(addDashes);
-  }
-
-  debug('startScanning', request, allowDuplicates);
-
-  this._ble.requestDevice(request)
-    .then(function(device){
-      debug('scan finished', device);
-      self.emit('scanStop', {});
-      if(device){
-
-        var address = device.id;
-        //TODO use device.adData when api is ready
-        //rssi = device.adData.rssi;
-
-        self._peripherals[address] = {
-          uuid: address,
-          address: address,
-          advertisement: {localName:device.name}, //advertisement,
-          device: device,
-          cachedServices: {},
-          localName: device.name,
-          serviceUuids: options.services
-        };
-        if(device.adData){
-          self._peripherals[address].rssi = device.adData.rssi;
-        }
-
-        self.emit('discover', device.id, device.id, device.addressType, !device.paired, self._peripherals[address].advertisement, self._peripherals[address].rssi);
-      }
-    })
-    .catch(function(err){
-      debug('err scanning', err);
-      self.emit('scanStop', {});
-      self.emit('error', err);
-    });
-
-  this.emit('scanStart');
-};
-
-NobleBindings.prototype.stopScanning = function() {
-  this._startScanCommand = null;
-
-  //TODO: need web api completed for this to work'=
-  this.emit('scanStop');
-};
-
-NobleBindings.prototype.connect = function(deviceUuid) {
-  var self = this;
-  debug('connect', deviceUuid);
-  var peripheral = this._peripherals[deviceUuid];
-
-  // Attempts to connect to remote GATT Server.
-  peripheral.device.gatt.connect()
-    .then(function(gattServer){
-      debug('peripheral connected', gattServer);
-      self.emit('connect', deviceUuid);
-    }, function(err){
-      debug('err connecting', err);
-      self.emit('connect', deviceUuid, err);
-    });
-
-};
-
-NobleBindings.prototype.disconnect = function(deviceUuid) {
-  var peripheral = this._peripherals[deviceUuid];
-  if(peripheral.device.gatt){
-    peripheral.device.gatt.disconnect();
-    this.emit('disconnect', deviceUuid);
-  }
-};
-
-NobleBindings.prototype.updateRssi = function(deviceUuid) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO: need web api completed for this to work
-  // this.emit('rssiUpdate', deviceUuid, rssi);
-};
-
-NobleBindings.prototype.discoverServices = function(deviceUuid, uuids) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO: need web api completed for this to work
-  if(peripheral){
-    this.emit('servicesDiscover', deviceUuid, peripheral.serviceUuids || uuids);
-  }
-
-};
-
-NobleBindings.prototype.discoverIncludedServices = function(deviceUuid, serviceUuid, serviceUuids) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO impelment when web API has functionatility then emit response
-  //this.emit('includedServicesDiscover', deviceUuid, serviceUuid, includedServiceUuids);
-};
-
-NobleBindings.prototype.discoverCharacteristics = function(deviceUuid, serviceUuid, characteristicUuids) {
-  var self = this;
-  var peripheral = self._peripherals[deviceUuid];
-
-  if(peripheral){
-
-    self.getPrimaryService(peripheral, serviceUuid)
-      .then(function(service){
-        return service.getCharacteristics();
-      })
-      .then(function(characteristics) {
-        var discoveredCharateristcs = characteristics.map(function(char){
-          var charInfo = {uuid: stripDashes(char.uuid), properties: []};
-
-          if(char.properties.writeWithoutResponse){
-            charInfo.properties.push('writeWithoutResponse');
-          }
-
-          if(char.properties.write){
-            charInfo.properties.push('write');
-          }
-
-          if(char.properties.read){
-            charInfo.properties.push('read');
-          }
-
-          if(char.properties.notify){
-            charInfo.properties.push('notify');
-          }
-
-          return charInfo;
-        });
-
-        debug('discoverCharacteristics', deviceUuid, serviceUuid, discoveredCharateristcs);
-        self.emit('characteristicsDiscover', deviceUuid, serviceUuid, discoveredCharateristcs);
-
-      });
-  }
-
-};
-
-NobleBindings.prototype.getPrimaryService = function(peripheral, serviceUuid){
-  serviceUuid = addDashes(serviceUuid);
-
-  if(peripheral.cachedServices[serviceUuid]){
-    return new Promise(function(resolve, reject){
-      resolve(peripheral.cachedServices[serviceUuid]);
-    });
-  }
-
-  return peripheral.device.gatt.getPrimaryService(serviceUuid)
-    .then(function(service){
-      peripheral.cachedServices[serviceUuid] = service;
-      return service;
-    });
-};
-
-NobleBindings.prototype.read = function(deviceUuid, serviceUuid, characteristicUuid) {
-  var self = this;
-  var peripheral = this._peripherals[deviceUuid];
-  debug('read', deviceUuid, serviceUuid, characteristicUuid);
-
-  self.getPrimaryService(peripheral, serviceUuid)
-    .then(function(service){
-      return service.getCharacteristic(addDashes(characteristicUuid));
-    })
-    .then(function(characteristic) {
-      return characteristic.readValue();
-    })
-    .then(function(data){
-      self.emit('read', peripheral.uuid, serviceUuid, characteristicUuid, new Buffer(data.buffer), false);
-    })
-    .catch(function(err) {
-      debug('error reading characteristic', err);
-      self.emit('error', err);
-    });
-};
-
-NobleBindings.prototype.write = function(deviceUuid, serviceUuid, characteristicUuid, data, withoutResponse) {
-  var self = this;
-  var peripheral = this._peripherals[deviceUuid];
-  debug('write', deviceUuid, serviceUuid, characteristicUuid, data, withoutResponse);
-
-  self.getPrimaryService(peripheral, serviceUuid)
-    .then(function(service){
-      return service.getCharacteristic(addDashes(characteristicUuid));
-    })
-    .then(function(characteristic) {
-      return characteristic.writeValue(data);
-    })
-    .then(function(){
-      debug('value written');
-      self.emit('write', peripheral.uuid, serviceUuid, characteristicUuid);
-    })
-    .catch(function(err) {
-      debug('error writing to characteristic', serviceUuid, characteristicUuid, err);
-    });
-
-};
-
-NobleBindings.prototype.broadcast = function(deviceUuid, serviceUuid, characteristicUuid, broadcast) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO impelment when web API has functionatility then emit response
-  //this.emit('broadcast', deviceUuid, serviceUuid, characteristicUuid, state);
-};
-
-NobleBindings.prototype.notify = function(deviceUuid, serviceUuid, characteristicUuid, notify) {
-  var self = this;
-  var peripheral = this._peripherals[deviceUuid];
-
-  var charPromise = self.getPrimaryService(peripheral, serviceUuid)
-    .then(function(service){
-      return service.getCharacteristic(addDashes(characteristicUuid));
-    });
-
-  peripheral.notifcationListeners = peripheral.notifcationListeners || {};
-
-  if(notify){
-    charPromise.then(function(characteristic) {
-      return characteristic.startNotifications();
-    })
-    .then(function(characteristic){
-      debug('notifications started', characteristicUuid);
-      peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid] = function(evt){
-        debug('oncharacteristicvaluechanged', evt, new Buffer(evt.target.value.buffer));
-        self.emit('read', deviceUuid, serviceUuid, characteristicUuid, new Buffer(evt.target.value.buffer), true);
-      };
-      characteristic.addEventListener('characteristicvaluechanged', peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid]);
-      self.emit('notify', deviceUuid, serviceUuid, characteristicUuid, true);
-      return characteristic;
-    })
-    .catch(function(err) {
-      debug('error enabling notifications on characteristic', err);
-      self.emit('error', err);
-    });
-  }
-  else{
-    charPromise.then(function(characteristic) {
-      return characteristic.stopNotifications();
-    })
-    .then(function(characteristic){
-      debug('notifications stopped', characteristic);
-      if(peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid]){
-        characteristic.removeEventListener('characteristicvaluechanged', peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid]);
-        delete peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid];
-      }
-      self.emit('notify', deviceUuid, serviceUuid, characteristicUuid, false);
-      return characteristic;
-    })
-    .catch(function(err) {
-      debug('error disabling notifications on characteristic', err);
-      self.emit('error', err);
-    });
-  }
-
-};
-
-NobleBindings.prototype.discoverDescriptors = function(deviceUuid, serviceUuid, characteristicUuid) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO impelment when web API has functionatility then emit response
-  //this.emit('descriptorsDiscover', deviceUuid, serviceUuid, characteristicUuid, descriptors);
-};
-
-NobleBindings.prototype.readValue = function(deviceUuid, serviceUuid, characteristicUuid, descriptorUuid) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO impelment when web API has functionatility then emit response
-  //this.emit('valueRead', deviceUuid, serviceUuid, characteristicUuid, descriptorUuid, data);
-};
-
-NobleBindings.prototype.writeValue = function(deviceUuid, serviceUuid, characteristicUuid, descriptorUuid, data) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO impelment when web API has functionatility then emit response
-  //this.emit('valueWrite', deviceUuid, serviceUuid, characteristicUuid, descriptorUuid);
-};
-
-NobleBindings.prototype.readHandle = function(deviceUuid, handle) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO impelment when web API has functionatility then emit response
-  //this.emit('handleRead', deviceUuid, handle, data);
-};
-
-NobleBindings.prototype.writeHandle = function(deviceUuid, handle, data, withoutResponse) {
-  var peripheral = this._peripherals[deviceUuid];
-
-  //TODO impelment when web API has functionatility then emit response
-  //this.emit('handleWrite', deviceUuid, handle);
-};
-
-var nobleBindings = new NobleBindings();
-
-module.exports = nobleBindings;
-
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(0).Buffer))
-
-/***/ }),
-/* 8 */
 /***/ (function(module, exports) {
 
 var charenc = {
@@ -4040,10 +3191,262 @@ module.exports = charenc;
 
 
 /***/ }),
-/* 9 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(process, Buffer) {/*
+/* WEBPACK VAR INJECTION */(function(global) {module.exports = false;
+
+// Only Node.JS has a process variable that is of [[Class]] process
+try {
+ module.exports = Object.prototype.toString.call(global.process) === '[object process]' 
+} catch(e) {}
+
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
+* loglevel - https://github.com/pimterry/loglevel
+*
+* Copyright (c) 2013 Tim Perry
+* Licensed under the MIT license.
+*/
+(function (root, definition) {
+    "use strict";
+    if (true) {
+        !(__WEBPACK_AMD_DEFINE_FACTORY__ = (definition),
+				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
+				(__WEBPACK_AMD_DEFINE_FACTORY__.call(exports, __webpack_require__, exports, module)) :
+				__WEBPACK_AMD_DEFINE_FACTORY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+    } else if (typeof module === 'object' && module.exports) {
+        module.exports = definition();
+    } else {
+        root.log = definition();
+    }
+}(this, function () {
+    "use strict";
+    var noop = function() {};
+    var undefinedType = "undefined";
+
+    function realMethod(methodName) {
+        if (typeof console === undefinedType) {
+            return false; // We can't build a real method without a console to log to
+        } else if (console[methodName] !== undefined) {
+            return bindMethod(console, methodName);
+        } else if (console.log !== undefined) {
+            return bindMethod(console, 'log');
+        } else {
+            return noop;
+        }
+    }
+
+    function bindMethod(obj, methodName) {
+        var method = obj[methodName];
+        if (typeof method.bind === 'function') {
+            return method.bind(obj);
+        } else {
+            try {
+                return Function.prototype.bind.call(method, obj);
+            } catch (e) {
+                // Missing bind shim or IE8 + Modernizr, fallback to wrapping
+                return function() {
+                    return Function.prototype.apply.apply(method, [obj, arguments]);
+                };
+            }
+        }
+    }
+
+    // these private functions always need `this` to be set properly
+
+    function enableLoggingWhenConsoleArrives(methodName, level, loggerName) {
+        return function () {
+            if (typeof console !== undefinedType) {
+                replaceLoggingMethods.call(this, level, loggerName);
+                this[methodName].apply(this, arguments);
+            }
+        };
+    }
+
+    function replaceLoggingMethods(level, loggerName) {
+        /*jshint validthis:true */
+        for (var i = 0; i < logMethods.length; i++) {
+            var methodName = logMethods[i];
+            this[methodName] = (i < level) ?
+                noop :
+                this.methodFactory(methodName, level, loggerName);
+        }
+    }
+
+    function defaultMethodFactory(methodName, level, loggerName) {
+        /*jshint validthis:true */
+        return realMethod(methodName) ||
+               enableLoggingWhenConsoleArrives.apply(this, arguments);
+    }
+
+    var logMethods = [
+        "trace",
+        "debug",
+        "info",
+        "warn",
+        "error"
+    ];
+
+    function Logger(name, defaultLevel, factory) {
+      var self = this;
+      var currentLevel;
+      var storageKey = "loglevel";
+      if (name) {
+        storageKey += ":" + name;
+      }
+
+      function persistLevelIfPossible(levelNum) {
+          var levelName = (logMethods[levelNum] || 'silent').toUpperCase();
+
+          // Use localStorage if available
+          try {
+              window.localStorage[storageKey] = levelName;
+              return;
+          } catch (ignore) {}
+
+          // Use session cookie as fallback
+          try {
+              window.document.cookie =
+                encodeURIComponent(storageKey) + "=" + levelName + ";";
+          } catch (ignore) {}
+      }
+
+      function getPersistedLevel() {
+          var storedLevel;
+
+          try {
+              storedLevel = window.localStorage[storageKey];
+          } catch (ignore) {}
+
+          if (typeof storedLevel === undefinedType) {
+              try {
+                  var cookie = window.document.cookie;
+                  var location = cookie.indexOf(
+                      encodeURIComponent(storageKey) + "=");
+                  if (location) {
+                      storedLevel = /^([^;]+)/.exec(cookie.slice(location))[1];
+                  }
+              } catch (ignore) {}
+          }
+
+          // If the stored level is not valid, treat it as if nothing was stored.
+          if (self.levels[storedLevel] === undefined) {
+              storedLevel = undefined;
+          }
+
+          return storedLevel;
+      }
+
+      /*
+       *
+       * Public API
+       *
+       */
+
+      self.levels = { "TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3,
+          "ERROR": 4, "SILENT": 5};
+
+      self.methodFactory = factory || defaultMethodFactory;
+
+      self.getLevel = function () {
+          return currentLevel;
+      };
+
+      self.setLevel = function (level, persist) {
+          if (typeof level === "string" && self.levels[level.toUpperCase()] !== undefined) {
+              level = self.levels[level.toUpperCase()];
+          }
+          if (typeof level === "number" && level >= 0 && level <= self.levels.SILENT) {
+              currentLevel = level;
+              if (persist !== false) {  // defaults to true
+                  persistLevelIfPossible(level);
+              }
+              replaceLoggingMethods.call(self, level, name);
+              if (typeof console === undefinedType && level < self.levels.SILENT) {
+                  return "No console available for logging";
+              }
+          } else {
+              throw "log.setLevel() called with invalid level: " + level;
+          }
+      };
+
+      self.setDefaultLevel = function (level) {
+          if (!getPersistedLevel()) {
+              self.setLevel(level, false);
+          }
+      };
+
+      self.enableAll = function(persist) {
+          self.setLevel(self.levels.TRACE, persist);
+      };
+
+      self.disableAll = function(persist) {
+          self.setLevel(self.levels.SILENT, persist);
+      };
+
+      // Initialize with the right level
+      var initialLevel = getPersistedLevel();
+      if (initialLevel == null) {
+          initialLevel = defaultLevel == null ? "WARN" : defaultLevel;
+      }
+      self.setLevel(initialLevel, false);
+    }
+
+    /*
+     *
+     * Package-level API
+     *
+     */
+
+    var defaultLogger = new Logger();
+
+    var _loggersByName = {};
+    defaultLogger.getLogger = function getLogger(name) {
+        if (typeof name !== "string" || name === "") {
+          throw new TypeError("You must supply a name when creating a logger.");
+        }
+
+        var logger = _loggersByName[name];
+        if (!logger) {
+          logger = _loggersByName[name] = new Logger(
+            name, defaultLogger.getLevel(), defaultLogger.methodFactory);
+        }
+        return logger;
+    };
+
+    // Grab the current global log variable in case of overwrite
+    var _log = (typeof window !== undefinedType) ? window.log : undefined;
+    defaultLogger.noConflict = function() {
+        if (typeof window !== undefinedType &&
+               window.log === defaultLogger) {
+            window.log = _log;
+        }
+
+        return defaultLogger;
+    };
+
+    return defaultLogger;
+}));
+
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports) {
+
+module.exports = "winston";
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/* WEBPACK VAR INJECTION */(function(Buffer) {/*
  * node.js driver for SBrick
  *
  * Complete protocol documentation can be found here:
@@ -4052,14 +3455,15 @@ module.exports = charenc;
  * Current version supports SBrick Protocol 17
  */
 
-const noble = typeof process !== "undefined" ? __webpack_require__(10) : __webpack_require__(23)(__webpack_require__(7));
-//const winston = require('winston');
+const isNode = __webpack_require__(7);
+const noble = isNode ? __webpack_require__(38) : __webpack_require__(28)(__webpack_require__(27));
+const logger = isNode ? __webpack_require__(9) : __webpack_require__(8);
 const util = __webpack_require__(2);
 const EventEmitter = __webpack_require__(1).EventEmitter;
-const Queue = __webpack_require__(30);
-const SBrickChannel = __webpack_require__(36);
-const SBrickAdvertisementData = __webpack_require__(35);
-const passwordGenerator = __webpack_require__(37);
+const Queue = __webpack_require__(29);
+const SBrickChannel = __webpack_require__(35);
+const SBrickAdvertisementData = __webpack_require__(34);
+const passwordGenerator = __webpack_require__(36);
 
 /**
  * Promise to successful noble conneciton
@@ -4075,7 +3479,7 @@ const nobleConnected = function () {
 
             const nobleConnectTimeout = setTimeout(() => {
                 noble.removeAllListeners('stateChange');
-                console.log('connect timeout');
+                logger.warn('connect timeout');
                 reject('connect timeout');
             }, 1000);
 
@@ -4134,9 +3538,9 @@ SBrick.prototype.connect = function () {
         if (!this.connected) {
             let found = false; //somehow discover discovered the same sbrick multiple times
             nobleConnected().then(() => {
-                console.log('scanning for', this.uuid);
+                logger.info('scanning for', this.uuid);
                 noble.on('discover', (peripheral) => {
-                    console.log('found', peripheral.uuid);
+                    logger.info('found', peripheral.uuid);
                     if (!found && (this.uuid === peripheral.uuid || this.uuid === 'webbluetooth')) {
                         found = true;
                         noble.stopScanning();
@@ -4149,28 +3553,28 @@ SBrick.prototype.connect = function () {
                             }
 
                             this.connected = true;
-                            console.log('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
+                            logger.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
 
                             peripheral.once('disconnect', () => {
                                 clearInterval(this.runInterval);
                                 clearInterval(this.adcInterval);
                                 this.connected = false;
                                 this.authenticated = false;
-                                console.log('disconnected peripheral', this.uuid);
+                                logger.warn('disconnected peripheral', this.uuid);
                                 this.emit('SBrick.disconnected');
                                 this.removeAllListeners();
                             });
 
                             peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
                                 if (err) {
-                                    console.log('service discovery error', err);
+                                    logger.warn('service discovery error', err);
                                     return reject(err);
                                 }
 
-                                console.log('remote control service found');
+                                logger.debug('remote control service found');
 
                                 services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
-                                    console.log('remote control characteristic found');
+                                    logger.debug('remote control characteristic found');
                                     this.characteristic = characteristics[0];
                                     return resolve();
                                 });
@@ -4222,7 +3626,7 @@ SBrick.prototype.start = function (password) {
 
     this.characteristic.subscribe((err) => {
         if (err) {
-            console.log('subscribe error', err);
+            logger.warn('subscribe error', err);
         }
     });
 
@@ -4235,7 +3639,7 @@ SBrick.prototype.start = function (password) {
                     });
                 });
             } else {
-                console.log('queue full');
+                logger.debug('queue full');
             }
         }
     }, 200);
@@ -4250,13 +3654,13 @@ SBrick.prototype.start = function (password) {
             .then((temperature) => {
                 this.emit('SBrick.temperature', temperature);
             })
-            .catch(console.log);
+            .catch(logger.warn);
     }, 1100);
 
     return this.isAuthenticated()
         .then((authenticated) => {
             if (authenticated) {
-                console.log('authenticated');
+                logger.info('authenticated');
                 return true;
             }
 
@@ -4277,7 +3681,7 @@ SBrick.prototype.login = function (userId, password) {
             return this.isAuthenticated();
         })
         .then((authenticated) => {
-            console.log('authentication ' + (authenticated ? 'successful' : 'failed'));
+            logger.info('authentication ' + (authenticated ? 'successful' : 'failed'));
             return authenticated ? true : Promise.reject('authentication failed');
         });
 };
@@ -4294,20 +3698,20 @@ SBrick.prototype.writeCommand = function (cmd) {
     }
 
     return new Promise((resolve, reject) => {
-        console.log('write', cmd);
+        logger.debug('write', cmd);
         const now = new Date().getTime();
 
         // noble does not handle write errors correctly
         const writeErrorTimeout = setTimeout(() => {
-            console.log('write timeout');
+            logger.warn('write timeout');
             reject('write timeout');
         }, 100);
 
         this.characteristic.write(cmd, false, (err) => {
-            console.log('write time: ', new Date().getTime() - now);
+            logger.debug('write time: ', new Date().getTime() - now);
             clearTimeout(writeErrorTimeout);
             if (err) {
-                console.log('write error', err, cmd);
+                logger.warn('write error', err, cmd);
                 return reject(err);
             }
             resolve();
@@ -4325,7 +3729,7 @@ SBrick.prototype.readCommand = function (cmd) {
     return new Promise((resolve, reject) => {
         this.writeCommand(cmd).then(() => {
             this.once('SBrick.read', (data) => {
-                console.log('read', cmd, data);
+                logger.debug('read', cmd, data);
                 return resolve(data);
             });
             this.characteristic.read(); //trigger extra read, apart from subscribe
@@ -4772,7 +4176,7 @@ SBrick.prototype.getVoltageNotificationSetup = function () {
  */
 SBrick.scanSBricks = function () {
     return new Promise((resolve, reject) => {
-        console.log('scanning...');
+        logger.info('scanning...');
         nobleConnected().then(() => {
             const sbricks = [];
             noble.on('discover', (peripheral) => {
@@ -4780,17 +4184,17 @@ SBrick.scanSBricks = function () {
                 try {
                     let sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
                     sbrickdata.uuid = peripheral.uuid;
-                    console.log('SBrick', sbrickdata);
+                    logger.info('SBrick', sbrickdata);
                     sbricks.push(sbrickdata);
                 } catch (err) {
-                    console.log(peripheral.uuid, err);
+                    logger.info(peripheral.uuid, err);
                 }
             });
 
             noble.startScanning();
 
             setTimeout(() => {
-                console.log('scanning finished');
+                logger.info('scanning finished');
                 noble.stopScanning();
                 noble.removeAllListeners('discover');
                 resolve(sbricks);
@@ -4800,20 +4204,861 @@ SBrick.scanSBricks = function () {
 };
 
 module.exports = SBrick;
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(0).Buffer))
-
-/***/ }),
-/* 10 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var Noble = __webpack_require__(6);
-var bindings = __webpack_require__(16)();
-
-module.exports = new Noble(bindings);
-
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0).Buffer))
 
 /***/ }),
 /* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+exports.byteLength = byteLength
+exports.toByteArray = toByteArray
+exports.fromByteArray = fromByteArray
+
+var lookup = []
+var revLookup = []
+var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array
+
+var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+for (var i = 0, len = code.length; i < len; ++i) {
+  lookup[i] = code[i]
+  revLookup[code.charCodeAt(i)] = i
+}
+
+revLookup['-'.charCodeAt(0)] = 62
+revLookup['_'.charCodeAt(0)] = 63
+
+function placeHoldersCount (b64) {
+  var len = b64.length
+  if (len % 4 > 0) {
+    throw new Error('Invalid string. Length must be a multiple of 4')
+  }
+
+  // the number of equal signs (place holders)
+  // if there are two placeholders, than the two characters before it
+  // represent one byte
+  // if there is only one, then the three characters before it represent 2 bytes
+  // this is just a cheap hack to not do indexOf twice
+  return b64[len - 2] === '=' ? 2 : b64[len - 1] === '=' ? 1 : 0
+}
+
+function byteLength (b64) {
+  // base64 is 4/3 + up to two characters of the original data
+  return b64.length * 3 / 4 - placeHoldersCount(b64)
+}
+
+function toByteArray (b64) {
+  var i, j, l, tmp, placeHolders, arr
+  var len = b64.length
+  placeHolders = placeHoldersCount(b64)
+
+  arr = new Arr(len * 3 / 4 - placeHolders)
+
+  // if there are placeholders, only get up to the last complete 4 chars
+  l = placeHolders > 0 ? len - 4 : len
+
+  var L = 0
+
+  for (i = 0, j = 0; i < l; i += 4, j += 3) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 18) | (revLookup[b64.charCodeAt(i + 1)] << 12) | (revLookup[b64.charCodeAt(i + 2)] << 6) | revLookup[b64.charCodeAt(i + 3)]
+    arr[L++] = (tmp >> 16) & 0xFF
+    arr[L++] = (tmp >> 8) & 0xFF
+    arr[L++] = tmp & 0xFF
+  }
+
+  if (placeHolders === 2) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 2) | (revLookup[b64.charCodeAt(i + 1)] >> 4)
+    arr[L++] = tmp & 0xFF
+  } else if (placeHolders === 1) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 10) | (revLookup[b64.charCodeAt(i + 1)] << 4) | (revLookup[b64.charCodeAt(i + 2)] >> 2)
+    arr[L++] = (tmp >> 8) & 0xFF
+    arr[L++] = tmp & 0xFF
+  }
+
+  return arr
+}
+
+function tripletToBase64 (num) {
+  return lookup[num >> 18 & 0x3F] + lookup[num >> 12 & 0x3F] + lookup[num >> 6 & 0x3F] + lookup[num & 0x3F]
+}
+
+function encodeChunk (uint8, start, end) {
+  var tmp
+  var output = []
+  for (var i = start; i < end; i += 3) {
+    tmp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
+    output.push(tripletToBase64(tmp))
+  }
+  return output.join('')
+}
+
+function fromByteArray (uint8) {
+  var tmp
+  var len = uint8.length
+  var extraBytes = len % 3 // if we have 1 byte left, pad 2 bytes
+  var output = ''
+  var parts = []
+  var maxChunkLength = 16383 // must be multiple of 3
+
+  // go through the array every three bytes, we'll deal with trailing stuff later
+  for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
+    parts.push(encodeChunk(uint8, i, (i + maxChunkLength) > len2 ? len2 : (i + maxChunkLength)))
+  }
+
+  // pad the end with zeros, but make sure to not forget the extra bytes
+  if (extraBytes === 1) {
+    tmp = uint8[len - 1]
+    output += lookup[tmp >> 2]
+    output += lookup[(tmp << 4) & 0x3F]
+    output += '=='
+  } else if (extraBytes === 2) {
+    tmp = (uint8[len - 2] << 8) + (uint8[len - 1])
+    output += lookup[tmp >> 10]
+    output += lookup[(tmp >> 4) & 0x3F]
+    output += lookup[(tmp << 2) & 0x3F]
+    output += '='
+  }
+
+  parts.push(output)
+
+  return parts.join('')
+}
+
+
+/***/ }),
+/* 12 */
+/***/ (function(module, exports) {
+
+(function() {
+  var base64map
+      = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
+
+  crypt = {
+    // Bit-wise rotation left
+    rotl: function(n, b) {
+      return (n << b) | (n >>> (32 - b));
+    },
+
+    // Bit-wise rotation right
+    rotr: function(n, b) {
+      return (n << (32 - b)) | (n >>> b);
+    },
+
+    // Swap big-endian to little-endian and vice versa
+    endian: function(n) {
+      // If number given, swap endian
+      if (n.constructor == Number) {
+        return crypt.rotl(n, 8) & 0x00FF00FF | crypt.rotl(n, 24) & 0xFF00FF00;
+      }
+
+      // Else, assume array and swap all items
+      for (var i = 0; i < n.length; i++)
+        n[i] = crypt.endian(n[i]);
+      return n;
+    },
+
+    // Generate an array of any length of random bytes
+    randomBytes: function(n) {
+      for (var bytes = []; n > 0; n--)
+        bytes.push(Math.floor(Math.random() * 256));
+      return bytes;
+    },
+
+    // Convert a byte array to big-endian 32-bit words
+    bytesToWords: function(bytes) {
+      for (var words = [], i = 0, b = 0; i < bytes.length; i++, b += 8)
+        words[b >>> 5] |= bytes[i] << (24 - b % 32);
+      return words;
+    },
+
+    // Convert big-endian 32-bit words to a byte array
+    wordsToBytes: function(words) {
+      for (var bytes = [], b = 0; b < words.length * 32; b += 8)
+        bytes.push((words[b >>> 5] >>> (24 - b % 32)) & 0xFF);
+      return bytes;
+    },
+
+    // Convert a byte array to a hex string
+    bytesToHex: function(bytes) {
+      for (var hex = [], i = 0; i < bytes.length; i++) {
+        hex.push((bytes[i] >>> 4).toString(16));
+        hex.push((bytes[i] & 0xF).toString(16));
+      }
+      return hex.join('');
+    },
+
+    // Convert a hex string to a byte array
+    hexToBytes: function(hex) {
+      for (var bytes = [], c = 0; c < hex.length; c += 2)
+        bytes.push(parseInt(hex.substr(c, 2), 16));
+      return bytes;
+    },
+
+    // Convert a byte array to a base-64 string
+    bytesToBase64: function(bytes) {
+      for (var base64 = [], i = 0; i < bytes.length; i += 3) {
+        var triplet = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+        for (var j = 0; j < 4; j++)
+          if (i * 8 + j * 6 <= bytes.length * 8)
+            base64.push(base64map.charAt((triplet >>> 6 * (3 - j)) & 0x3F));
+          else
+            base64.push('=');
+      }
+      return base64.join('');
+    },
+
+    // Convert a base-64 string to a byte array
+    base64ToBytes: function(base64) {
+      // Remove non-base-64 characters
+      base64 = base64.replace(/[^A-Z0-9+\/]/ig, '');
+
+      for (var bytes = [], i = 0, imod4 = 0; i < base64.length;
+          imod4 = ++i % 4) {
+        if (imod4 == 0) continue;
+        bytes.push(((base64map.indexOf(base64.charAt(i - 1))
+            & (Math.pow(2, -2 * imod4 + 8) - 1)) << (imod4 * 2))
+            | (base64map.indexOf(base64.charAt(i)) >>> (6 - imod4 * 2)));
+      }
+      return bytes;
+    }
+  };
+
+  module.exports = crypt;
+})();
+
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+
+/**
+ * This is the common logic for both the Node.js and web browser
+ * implementations of `debug()`.
+ *
+ * Expose `debug()` as the module.
+ */
+
+exports = module.exports = debug;
+exports.coerce = coerce;
+exports.disable = disable;
+exports.enable = enable;
+exports.enabled = enabled;
+exports.humanize = __webpack_require__(18);
+
+/**
+ * The currently active debug mode names, and names to skip.
+ */
+
+exports.names = [];
+exports.skips = [];
+
+/**
+ * Map of special "%n" handling functions, for the debug "format" argument.
+ *
+ * Valid key names are a single, lowercased letter, i.e. "n".
+ */
+
+exports.formatters = {};
+
+/**
+ * Previously assigned color.
+ */
+
+var prevColor = 0;
+
+/**
+ * Previous log timestamp.
+ */
+
+var prevTime;
+
+/**
+ * Select a color.
+ *
+ * @return {Number}
+ * @api private
+ */
+
+function selectColor() {
+  return exports.colors[prevColor++ % exports.colors.length];
+}
+
+/**
+ * Create a debugger with the given `namespace`.
+ *
+ * @param {String} namespace
+ * @return {Function}
+ * @api public
+ */
+
+function debug(namespace) {
+
+  // define the `disabled` version
+  function disabled() {
+  }
+  disabled.enabled = false;
+
+  // define the `enabled` version
+  function enabled() {
+
+    var self = enabled;
+
+    // set `diff` timestamp
+    var curr = +new Date();
+    var ms = curr - (prevTime || curr);
+    self.diff = ms;
+    self.prev = prevTime;
+    self.curr = curr;
+    prevTime = curr;
+
+    // add the `color` if not set
+    if (null == self.useColors) self.useColors = exports.useColors();
+    if (null == self.color && self.useColors) self.color = selectColor();
+
+    var args = Array.prototype.slice.call(arguments);
+
+    args[0] = exports.coerce(args[0]);
+
+    if ('string' !== typeof args[0]) {
+      // anything else let's inspect with %o
+      args = ['%o'].concat(args);
+    }
+
+    // apply any `formatters` transformations
+    var index = 0;
+    args[0] = args[0].replace(/%([a-z%])/g, function(match, format) {
+      // if we encounter an escaped % then don't increase the array index
+      if (match === '%%') return match;
+      index++;
+      var formatter = exports.formatters[format];
+      if ('function' === typeof formatter) {
+        var val = args[index];
+        match = formatter.call(self, val);
+
+        // now we need to remove `args[index]` since it's inlined in the `format`
+        args.splice(index, 1);
+        index--;
+      }
+      return match;
+    });
+
+    if ('function' === typeof exports.formatArgs) {
+      args = exports.formatArgs.apply(self, args);
+    }
+    var logFn = enabled.log || exports.log || console.log.bind(console);
+    logFn.apply(self, args);
+  }
+  enabled.enabled = true;
+
+  var fn = exports.enabled(namespace) ? enabled : disabled;
+
+  fn.namespace = namespace;
+
+  return fn;
+}
+
+/**
+ * Enables a debug mode by namespaces. This can include modes
+ * separated by a colon and wildcards.
+ *
+ * @param {String} namespaces
+ * @api public
+ */
+
+function enable(namespaces) {
+  exports.save(namespaces);
+
+  var split = (namespaces || '').split(/[\s,]+/);
+  var len = split.length;
+
+  for (var i = 0; i < len; i++) {
+    if (!split[i]) continue; // ignore empty strings
+    namespaces = split[i].replace(/\*/g, '.*?');
+    if (namespaces[0] === '-') {
+      exports.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
+    } else {
+      exports.names.push(new RegExp('^' + namespaces + '$'));
+    }
+  }
+}
+
+/**
+ * Disable debug output.
+ *
+ * @api public
+ */
+
+function disable() {
+  exports.enable('');
+}
+
+/**
+ * Returns true if the given mode name is enabled, false otherwise.
+ *
+ * @param {String} name
+ * @return {Boolean}
+ * @api public
+ */
+
+function enabled(name) {
+  var i, len;
+  for (i = 0, len = exports.skips.length; i < len; i++) {
+    if (exports.skips[i].test(name)) {
+      return false;
+    }
+  }
+  for (i = 0, len = exports.names.length; i < len; i++) {
+    if (exports.names[i].test(name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Coerce `val`.
+ *
+ * @param {Mixed} val
+ * @return {Mixed}
+ * @api private
+ */
+
+function coerce(val) {
+  if (val instanceof Error) return val.stack || val.message;
+  return val;
+}
+
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports) {
+
+exports.read = function (buffer, offset, isLE, mLen, nBytes) {
+  var e, m
+  var eLen = nBytes * 8 - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var nBits = -7
+  var i = isLE ? (nBytes - 1) : 0
+  var d = isLE ? -1 : 1
+  var s = buffer[offset + i]
+
+  i += d
+
+  e = s & ((1 << (-nBits)) - 1)
+  s >>= (-nBits)
+  nBits += eLen
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
+
+  m = e & ((1 << (-nBits)) - 1)
+  e >>= (-nBits)
+  nBits += mLen
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
+
+  if (e === 0) {
+    e = 1 - eBias
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity)
+  } else {
+    m = m + Math.pow(2, mLen)
+    e = e - eBias
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
+}
+
+exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c
+  var eLen = nBytes * 8 - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
+  var i = isLE ? 0 : (nBytes - 1)
+  var d = isLE ? 1 : -1
+  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
+
+  value = Math.abs(value)
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0
+    e = eMax
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2)
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--
+      c *= 2
+    }
+    if (e + eBias >= 1) {
+      value += rt / c
+    } else {
+      value += rt * Math.pow(2, 1 - eBias)
+    }
+    if (value * c >= 2) {
+      e++
+      c /= 2
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0
+      e = eMax
+    } else if (e + eBias >= 1) {
+      m = (value * c - 1) * Math.pow(2, mLen)
+      e = e + eBias
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
+      e = 0
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
+
+  e = (e << mLen) | m
+  eLen += mLen
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
+
+  buffer[offset + i - d] |= s * 128
+}
+
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports) {
+
+/*!
+ * Determine if an object is a Buffer
+ *
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @license  MIT
+ */
+
+// The _isBuffer check is for Safari 5-7 support, because it's missing
+// Object.prototype.constructor. Remove this eventually
+module.exports = function (obj) {
+  return obj != null && (isBuffer(obj) || isSlowBuffer(obj) || !!obj._isBuffer)
+}
+
+function isBuffer (obj) {
+  return !!obj.constructor && typeof obj.constructor.isBuffer === 'function' && obj.constructor.isBuffer(obj)
+}
+
+// For Node v0.10 support. Remove this eventually.
+function isSlowBuffer (obj) {
+  return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
+}
+
+
+/***/ }),
+/* 16 */
+/***/ (function(module, exports) {
+
+var toString = {}.toString;
+
+module.exports = Array.isArray || function (arr) {
+  return toString.call(arr) == '[object Array]';
+};
+
+
+/***/ }),
+/* 17 */
+/***/ (function(module, exports, __webpack_require__) {
+
+(function(){
+  var crypt = __webpack_require__(12),
+      utf8 = __webpack_require__(6).utf8,
+      isBuffer = __webpack_require__(15),
+      bin = __webpack_require__(6).bin,
+
+  // The core
+  md5 = function (message, options) {
+    // Convert to byte array
+    if (message.constructor == String)
+      if (options && options.encoding === 'binary')
+        message = bin.stringToBytes(message);
+      else
+        message = utf8.stringToBytes(message);
+    else if (isBuffer(message))
+      message = Array.prototype.slice.call(message, 0);
+    else if (!Array.isArray(message))
+      message = message.toString();
+    // else, assume byte array already
+
+    var m = crypt.bytesToWords(message),
+        l = message.length * 8,
+        a =  1732584193,
+        b = -271733879,
+        c = -1732584194,
+        d =  271733878;
+
+    // Swap endian
+    for (var i = 0; i < m.length; i++) {
+      m[i] = ((m[i] <<  8) | (m[i] >>> 24)) & 0x00FF00FF |
+             ((m[i] << 24) | (m[i] >>>  8)) & 0xFF00FF00;
+    }
+
+    // Padding
+    m[l >>> 5] |= 0x80 << (l % 32);
+    m[(((l + 64) >>> 9) << 4) + 14] = l;
+
+    // Method shortcuts
+    var FF = md5._ff,
+        GG = md5._gg,
+        HH = md5._hh,
+        II = md5._ii;
+
+    for (var i = 0; i < m.length; i += 16) {
+
+      var aa = a,
+          bb = b,
+          cc = c,
+          dd = d;
+
+      a = FF(a, b, c, d, m[i+ 0],  7, -680876936);
+      d = FF(d, a, b, c, m[i+ 1], 12, -389564586);
+      c = FF(c, d, a, b, m[i+ 2], 17,  606105819);
+      b = FF(b, c, d, a, m[i+ 3], 22, -1044525330);
+      a = FF(a, b, c, d, m[i+ 4],  7, -176418897);
+      d = FF(d, a, b, c, m[i+ 5], 12,  1200080426);
+      c = FF(c, d, a, b, m[i+ 6], 17, -1473231341);
+      b = FF(b, c, d, a, m[i+ 7], 22, -45705983);
+      a = FF(a, b, c, d, m[i+ 8],  7,  1770035416);
+      d = FF(d, a, b, c, m[i+ 9], 12, -1958414417);
+      c = FF(c, d, a, b, m[i+10], 17, -42063);
+      b = FF(b, c, d, a, m[i+11], 22, -1990404162);
+      a = FF(a, b, c, d, m[i+12],  7,  1804603682);
+      d = FF(d, a, b, c, m[i+13], 12, -40341101);
+      c = FF(c, d, a, b, m[i+14], 17, -1502002290);
+      b = FF(b, c, d, a, m[i+15], 22,  1236535329);
+
+      a = GG(a, b, c, d, m[i+ 1],  5, -165796510);
+      d = GG(d, a, b, c, m[i+ 6],  9, -1069501632);
+      c = GG(c, d, a, b, m[i+11], 14,  643717713);
+      b = GG(b, c, d, a, m[i+ 0], 20, -373897302);
+      a = GG(a, b, c, d, m[i+ 5],  5, -701558691);
+      d = GG(d, a, b, c, m[i+10],  9,  38016083);
+      c = GG(c, d, a, b, m[i+15], 14, -660478335);
+      b = GG(b, c, d, a, m[i+ 4], 20, -405537848);
+      a = GG(a, b, c, d, m[i+ 9],  5,  568446438);
+      d = GG(d, a, b, c, m[i+14],  9, -1019803690);
+      c = GG(c, d, a, b, m[i+ 3], 14, -187363961);
+      b = GG(b, c, d, a, m[i+ 8], 20,  1163531501);
+      a = GG(a, b, c, d, m[i+13],  5, -1444681467);
+      d = GG(d, a, b, c, m[i+ 2],  9, -51403784);
+      c = GG(c, d, a, b, m[i+ 7], 14,  1735328473);
+      b = GG(b, c, d, a, m[i+12], 20, -1926607734);
+
+      a = HH(a, b, c, d, m[i+ 5],  4, -378558);
+      d = HH(d, a, b, c, m[i+ 8], 11, -2022574463);
+      c = HH(c, d, a, b, m[i+11], 16,  1839030562);
+      b = HH(b, c, d, a, m[i+14], 23, -35309556);
+      a = HH(a, b, c, d, m[i+ 1],  4, -1530992060);
+      d = HH(d, a, b, c, m[i+ 4], 11,  1272893353);
+      c = HH(c, d, a, b, m[i+ 7], 16, -155497632);
+      b = HH(b, c, d, a, m[i+10], 23, -1094730640);
+      a = HH(a, b, c, d, m[i+13],  4,  681279174);
+      d = HH(d, a, b, c, m[i+ 0], 11, -358537222);
+      c = HH(c, d, a, b, m[i+ 3], 16, -722521979);
+      b = HH(b, c, d, a, m[i+ 6], 23,  76029189);
+      a = HH(a, b, c, d, m[i+ 9],  4, -640364487);
+      d = HH(d, a, b, c, m[i+12], 11, -421815835);
+      c = HH(c, d, a, b, m[i+15], 16,  530742520);
+      b = HH(b, c, d, a, m[i+ 2], 23, -995338651);
+
+      a = II(a, b, c, d, m[i+ 0],  6, -198630844);
+      d = II(d, a, b, c, m[i+ 7], 10,  1126891415);
+      c = II(c, d, a, b, m[i+14], 15, -1416354905);
+      b = II(b, c, d, a, m[i+ 5], 21, -57434055);
+      a = II(a, b, c, d, m[i+12],  6,  1700485571);
+      d = II(d, a, b, c, m[i+ 3], 10, -1894986606);
+      c = II(c, d, a, b, m[i+10], 15, -1051523);
+      b = II(b, c, d, a, m[i+ 1], 21, -2054922799);
+      a = II(a, b, c, d, m[i+ 8],  6,  1873313359);
+      d = II(d, a, b, c, m[i+15], 10, -30611744);
+      c = II(c, d, a, b, m[i+ 6], 15, -1560198380);
+      b = II(b, c, d, a, m[i+13], 21,  1309151649);
+      a = II(a, b, c, d, m[i+ 4],  6, -145523070);
+      d = II(d, a, b, c, m[i+11], 10, -1120210379);
+      c = II(c, d, a, b, m[i+ 2], 15,  718787259);
+      b = II(b, c, d, a, m[i+ 9], 21, -343485551);
+
+      a = (a + aa) >>> 0;
+      b = (b + bb) >>> 0;
+      c = (c + cc) >>> 0;
+      d = (d + dd) >>> 0;
+    }
+
+    return crypt.endian([a, b, c, d]);
+  };
+
+  // Auxiliary functions
+  md5._ff  = function (a, b, c, d, x, s, t) {
+    var n = a + (b & c | ~b & d) + (x >>> 0) + t;
+    return ((n << s) | (n >>> (32 - s))) + b;
+  };
+  md5._gg  = function (a, b, c, d, x, s, t) {
+    var n = a + (b & d | c & ~d) + (x >>> 0) + t;
+    return ((n << s) | (n >>> (32 - s))) + b;
+  };
+  md5._hh  = function (a, b, c, d, x, s, t) {
+    var n = a + (b ^ c ^ d) + (x >>> 0) + t;
+    return ((n << s) | (n >>> (32 - s))) + b;
+  };
+  md5._ii  = function (a, b, c, d, x, s, t) {
+    var n = a + (c ^ (b | ~d)) + (x >>> 0) + t;
+    return ((n << s) | (n >>> (32 - s))) + b;
+  };
+
+  // Package private blocksize
+  md5._blocksize = 16;
+  md5._digestsize = 16;
+
+  module.exports = function (message, options) {
+    if (message === undefined || message === null)
+      throw new Error('Illegal argument ' + message);
+
+    var digestbytes = crypt.wordsToBytes(md5(message, options));
+    return options && options.asBytes ? digestbytes :
+        options && options.asString ? bin.bytesToString(digestbytes) :
+        crypt.bytesToHex(digestbytes);
+  };
+
+})();
+
+
+/***/ }),
+/* 18 */
+/***/ (function(module, exports) {
+
+/**
+ * Helpers.
+ */
+
+var s = 1000;
+var m = s * 60;
+var h = m * 60;
+var d = h * 24;
+var y = d * 365.25;
+
+/**
+ * Parse or format the given `val`.
+ *
+ * Options:
+ *
+ *  - `long` verbose formatting [false]
+ *
+ * @param {String|Number} val
+ * @param {Object} options
+ * @return {String|Number}
+ * @api public
+ */
+
+module.exports = function(val, options){
+  options = options || {};
+  if ('string' == typeof val) return parse(val);
+  return options.long
+    ? long(val)
+    : short(val);
+};
+
+/**
+ * Parse the given `str` and return milliseconds.
+ *
+ * @param {String} str
+ * @return {Number}
+ * @api private
+ */
+
+function parse(str) {
+  str = '' + str;
+  if (str.length > 10000) return;
+  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(str);
+  if (!match) return;
+  var n = parseFloat(match[1]);
+  var type = (match[2] || 'ms').toLowerCase();
+  switch (type) {
+    case 'years':
+    case 'year':
+    case 'yrs':
+    case 'yr':
+    case 'y':
+      return n * y;
+    case 'days':
+    case 'day':
+    case 'd':
+      return n * d;
+    case 'hours':
+    case 'hour':
+    case 'hrs':
+    case 'hr':
+    case 'h':
+      return n * h;
+    case 'minutes':
+    case 'minute':
+    case 'mins':
+    case 'min':
+    case 'm':
+      return n * m;
+    case 'seconds':
+    case 'second':
+    case 'secs':
+    case 'sec':
+    case 's':
+      return n * s;
+    case 'milliseconds':
+    case 'millisecond':
+    case 'msecs':
+    case 'msec':
+    case 'ms':
+      return n;
+  }
+}
+
+/**
+ * Short format for `ms`.
+ *
+ * @param {Number} ms
+ * @return {String}
+ * @api private
+ */
+
+function short(ms) {
+  if (ms >= d) return Math.round(ms / d) + 'd';
+  if (ms >= h) return Math.round(ms / h) + 'h';
+  if (ms >= m) return Math.round(ms / m) + 'm';
+  if (ms >= s) return Math.round(ms / s) + 's';
+  return ms + 'ms';
+}
+
+/**
+ * Long format for `ms`.
+ *
+ * @param {Number} ms
+ * @return {String}
+ * @api private
+ */
+
+function long(ms) {
+  return plural(ms, d, 'day')
+    || plural(ms, h, 'hour')
+    || plural(ms, m, 'minute')
+    || plural(ms, s, 'second')
+    || ms + ' ms';
+}
+
+/**
+ * Pluralization helper.
+ */
+
+function plural(ms, n, name) {
+  if (ms < n) return;
+  if (ms < n * 1.5) return Math.floor(ms / n) + ' ' + name;
+  return Math.ceil(ms / n) + ' ' + name + 's';
+}
+
+
+/***/ }),
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(process, Buffer) {var debug = __webpack_require__(3)('characteristic');
@@ -4821,7 +5066,7 @@ module.exports = new Noble(bindings);
 var events = __webpack_require__(1);
 var util = __webpack_require__(2);
 
-var characteristics = __webpack_require__(12);
+var characteristics = __webpack_require__(20);
 
 function Characteristic(noble, peripheralId, serviceUuid, uuid, properties) {
   this._noble = noble;
@@ -4943,10 +5188,10 @@ Characteristic.prototype.discoverDescriptors = function(callback) {
 
 module.exports = Characteristic;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(0).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5), __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 12 */
+/* 20 */
 /***/ (function(module, exports) {
 
 module.exports = {
@@ -5549,7 +5794,7 @@ module.exports = {
 };
 
 /***/ }),
-/* 13 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(Buffer) {var debug = __webpack_require__(3)('descriptor');
@@ -5557,7 +5802,7 @@ module.exports = {
 var events = __webpack_require__(1);
 var util = __webpack_require__(2);
 
-var descriptors = __webpack_require__(14);
+var descriptors = __webpack_require__(22);
 
 function Descriptor(noble, peripheralId, serviceUuid, characteristicUuid, uuid) {
   this._noble = noble;
@@ -5624,7 +5869,7 @@ module.exports = Descriptor;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 14 */
+/* 22 */
 /***/ (function(module, exports) {
 
 module.exports = {
@@ -5691,7 +5936,440 @@ module.exports = {
 };
 
 /***/ }),
-/* 15 */
+/* 23 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var debug = __webpack_require__(3)('noble');
+
+var events = __webpack_require__(1);
+var util = __webpack_require__(2);
+
+var Peripheral = __webpack_require__(24);
+var Service = __webpack_require__(25);
+var Characteristic = __webpack_require__(19);
+var Descriptor = __webpack_require__(21);
+
+function Noble(bindings) {
+  this.state = 'unknown';
+  this.address = 'unknown';
+
+  this._bindings = bindings;
+  this._peripherals = {};
+  this._services = {};
+  this._characteristics = {};
+  this._descriptors = {};
+  this._discoveredPeripheralUUids = [];
+
+  this._bindings.on('stateChange', this.onStateChange.bind(this));
+  this._bindings.on('addressChange', this.onAddressChange.bind(this));
+  this._bindings.on('scanStart', this.onScanStart.bind(this));
+  this._bindings.on('scanStop', this.onScanStop.bind(this));
+  this._bindings.on('discover', this.onDiscover.bind(this));
+  this._bindings.on('connect', this.onConnect.bind(this));
+  this._bindings.on('disconnect', this.onDisconnect.bind(this));
+  this._bindings.on('rssiUpdate', this.onRssiUpdate.bind(this));
+  this._bindings.on('servicesDiscover', this.onServicesDiscover.bind(this));
+  this._bindings.on('includedServicesDiscover', this.onIncludedServicesDiscover.bind(this));
+  this._bindings.on('characteristicsDiscover', this.onCharacteristicsDiscover.bind(this));
+  this._bindings.on('read', this.onRead.bind(this));
+  this._bindings.on('write', this.onWrite.bind(this));
+  this._bindings.on('broadcast', this.onBroadcast.bind(this));
+  this._bindings.on('notify', this.onNotify.bind(this));
+  this._bindings.on('descriptorsDiscover', this.onDescriptorsDiscover.bind(this));
+  this._bindings.on('valueRead', this.onValueRead.bind(this));
+  this._bindings.on('valueWrite', this.onValueWrite.bind(this));
+  this._bindings.on('handleRead', this.onHandleRead.bind(this));
+  this._bindings.on('handleWrite', this.onHandleWrite.bind(this));
+  this._bindings.on('handleNotify', this.onHandleNotify.bind(this));
+
+  this.on('warning', function(message) {
+    if (this.listeners('warning').length === 1) {
+      console.warn('noble: ' + message);
+    }
+  }.bind(this));
+
+  this._bindings.init();
+}
+
+util.inherits(Noble, events.EventEmitter);
+
+Noble.prototype.onStateChange = function(state) {
+  debug('stateChange ' + state);
+
+  this.state = state;
+
+  this.emit('stateChange', state);
+};
+
+Noble.prototype.onAddressChange = function(address) {
+  debug('addressChange ' + address);
+
+  this.address = address;
+};
+
+Noble.prototype.startScanning = function(serviceUuids, allowDuplicates, callback) {
+  if (this.state !== 'poweredOn') {
+    var error = new Error('Could not start scanning, state is ' + this.state + ' (not poweredOn)');
+
+    if (typeof callback === 'function') {
+      callback(error);
+    } else {
+      throw error;
+    }
+  } else {
+    if (callback) {
+      this.once('scanStart', function(filterDuplicates) {
+        callback(null, filterDuplicates);
+      });
+    }
+
+    this._discoveredPeripheralUUids = [];
+    this._allowDuplicates = allowDuplicates;
+
+    this._bindings.startScanning(serviceUuids, allowDuplicates);
+  }
+};
+
+Noble.prototype.onScanStart = function(filterDuplicates) {
+  debug('scanStart');
+  this.emit('scanStart', filterDuplicates);
+};
+
+Noble.prototype.stopScanning = function(callback) {
+  if (callback) {
+    this.once('scanStop', callback);
+  }
+  this._bindings.stopScanning();
+};
+
+Noble.prototype.onScanStop = function() {
+  debug('scanStop');
+  this.emit('scanStop');
+};
+
+Noble.prototype.onDiscover = function(uuid, address, addressType, connectable, advertisement, rssi) {
+  var peripheral = this._peripherals[uuid];
+
+  if (!peripheral) {
+    peripheral = new Peripheral(this, uuid, address, addressType, connectable, advertisement, rssi);
+
+    this._peripherals[uuid] = peripheral;
+    this._services[uuid] = {};
+    this._characteristics[uuid] = {};
+    this._descriptors[uuid] = {};
+  } else {
+    // "or" the advertisment data with existing
+    for (var i in advertisement) {
+      if (advertisement[i] !== undefined) {
+        peripheral.advertisement[i] = advertisement[i];
+      }
+    }
+
+    peripheral.rssi = rssi;
+  }
+
+  var previouslyDiscoverd = (this._discoveredPeripheralUUids.indexOf(uuid) !== -1);
+
+  if (!previouslyDiscoverd) {
+    this._discoveredPeripheralUUids.push(uuid);
+  }
+
+  if (this._allowDuplicates || !previouslyDiscoverd) {
+    this.emit('discover', peripheral);
+  }
+};
+
+Noble.prototype.connect = function(peripheralUuid) {
+  this._bindings.connect(peripheralUuid);
+};
+
+Noble.prototype.onConnect = function(peripheralUuid, error) {
+  var peripheral = this._peripherals[peripheralUuid];
+
+  if (peripheral) {
+    peripheral.state = error ? 'error' : 'connected';
+    peripheral.emit('connect', error);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' connected!');
+  }
+};
+
+Noble.prototype.disconnect = function(peripheralUuid) {
+  this._bindings.disconnect(peripheralUuid);
+};
+
+Noble.prototype.onDisconnect = function(peripheralUuid) {
+  var peripheral = this._peripherals[peripheralUuid];
+
+  if (peripheral) {
+    peripheral.state = 'disconnected';
+    peripheral.emit('disconnect');
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' disconnected!');
+  }
+};
+
+Noble.prototype.updateRssi = function(peripheralUuid) {
+  this._bindings.updateRssi(peripheralUuid);
+};
+
+Noble.prototype.onRssiUpdate = function(peripheralUuid, rssi) {
+  var peripheral = this._peripherals[peripheralUuid];
+
+  if (peripheral) {
+    peripheral.rssi = rssi;
+
+    peripheral.emit('rssiUpdate', rssi);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' RSSI update!');
+  }
+};
+
+Noble.prototype.discoverServices = function(peripheralUuid, uuids) {
+  this._bindings.discoverServices(peripheralUuid, uuids);
+};
+
+Noble.prototype.onServicesDiscover = function(peripheralUuid, serviceUuids) {
+  var peripheral = this._peripherals[peripheralUuid];
+
+  if (peripheral) {
+    var services = [];
+
+    for (var i = 0; i < serviceUuids.length; i++) {
+      var serviceUuid = serviceUuids[i];
+      var service = new Service(this, peripheralUuid, serviceUuid);
+
+      this._services[peripheralUuid][serviceUuid] = service;
+      this._characteristics[peripheralUuid][serviceUuid] = {};
+      this._descriptors[peripheralUuid][serviceUuid] = {};
+
+      services.push(service);
+    }
+
+    peripheral.services = services;
+
+    peripheral.emit('servicesDiscover', services);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' services discover!');
+  }
+};
+
+Noble.prototype.discoverIncludedServices = function(peripheralUuid, serviceUuid, serviceUuids) {
+  this._bindings.discoverIncludedServices(peripheralUuid, serviceUuid, serviceUuids);
+};
+
+Noble.prototype.onIncludedServicesDiscover = function(peripheralUuid, serviceUuid, includedServiceUuids) {
+  var service = this._services[peripheralUuid][serviceUuid];
+
+  if (service) {
+    service.includedServiceUuids = includedServiceUuids;
+
+    service.emit('includedServicesDiscover', includedServiceUuids);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ' included services discover!');
+  }
+};
+
+Noble.prototype.discoverCharacteristics = function(peripheralUuid, serviceUuid, characteristicUuids) {
+  this._bindings.discoverCharacteristics(peripheralUuid, serviceUuid, characteristicUuids);
+};
+
+Noble.prototype.onCharacteristicsDiscover = function(peripheralUuid, serviceUuid, characteristics) {
+  var service = this._services[peripheralUuid][serviceUuid];
+
+  if (service) {
+    var characteristics_ = [];
+
+    for (var i = 0; i < characteristics.length; i++) {
+      var characteristicUuid = characteristics[i].uuid;
+
+      var characteristic = new Characteristic(
+                                this,
+                                peripheralUuid,
+                                serviceUuid,
+                                characteristicUuid,
+                                characteristics[i].properties
+                            );
+
+      this._characteristics[peripheralUuid][serviceUuid][characteristicUuid] = characteristic;
+      this._descriptors[peripheralUuid][serviceUuid][characteristicUuid] = {};
+
+      characteristics_.push(characteristic);
+    }
+
+    service.characteristics = characteristics_;
+
+    service.emit('characteristicsDiscover', characteristics_);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ' characteristics discover!');
+  }
+};
+
+Noble.prototype.read = function(peripheralUuid, serviceUuid, characteristicUuid) {
+   this._bindings.read(peripheralUuid, serviceUuid, characteristicUuid);
+};
+
+Noble.prototype.onRead = function(peripheralUuid, serviceUuid, characteristicUuid, data, isNotification) {
+  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
+
+  if (characteristic) {
+    characteristic.emit('data', data, isNotification);
+
+    if (!isNotification) {
+      characteristic.emit('read', data, isNotification); // for backwards compatbility
+    }
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' read!');
+  }
+};
+
+Noble.prototype.write = function(peripheralUuid, serviceUuid, characteristicUuid, data, withoutResponse) {
+   this._bindings.write(peripheralUuid, serviceUuid, characteristicUuid, data, withoutResponse);
+};
+
+Noble.prototype.onWrite = function(peripheralUuid, serviceUuid, characteristicUuid) {
+  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
+
+  if (characteristic) {
+    characteristic.emit('write');
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' write!');
+  }
+};
+
+Noble.prototype.broadcast = function(peripheralUuid, serviceUuid, characteristicUuid, broadcast) {
+   this._bindings.broadcast(peripheralUuid, serviceUuid, characteristicUuid, broadcast);
+};
+
+Noble.prototype.onBroadcast = function(peripheralUuid, serviceUuid, characteristicUuid, state) {
+  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
+
+  if (characteristic) {
+    characteristic.emit('broadcast', state);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' broadcast!');
+  }
+};
+
+Noble.prototype.notify = function(peripheralUuid, serviceUuid, characteristicUuid, notify) {
+   this._bindings.notify(peripheralUuid, serviceUuid, characteristicUuid, notify);
+};
+
+Noble.prototype.onNotify = function(peripheralUuid, serviceUuid, characteristicUuid, state) {
+  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
+
+  if (characteristic) {
+    characteristic.emit('notify', state);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' notify!');
+  }
+};
+
+Noble.prototype.discoverDescriptors = function(peripheralUuid, serviceUuid, characteristicUuid) {
+  this._bindings.discoverDescriptors(peripheralUuid, serviceUuid, characteristicUuid);
+};
+
+Noble.prototype.onDescriptorsDiscover = function(peripheralUuid, serviceUuid, characteristicUuid, descriptors) {
+  var characteristic = this._characteristics[peripheralUuid][serviceUuid][characteristicUuid];
+
+  if (characteristic) {
+    var descriptors_ = [];
+
+    for (var i = 0; i < descriptors.length; i++) {
+      var descriptorUuid = descriptors[i];
+
+      var descriptor = new Descriptor(
+                            this,
+                            peripheralUuid,
+                            serviceUuid,
+                            characteristicUuid,
+                            descriptorUuid
+                        );
+
+      this._descriptors[peripheralUuid][serviceUuid][characteristicUuid][descriptorUuid] = descriptor;
+
+      descriptors_.push(descriptor);
+    }
+
+    characteristic.descriptors = descriptors_;
+
+    characteristic.emit('descriptorsDiscover', descriptors_);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' descriptors discover!');
+  }
+};
+
+Noble.prototype.readValue = function(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid) {
+  this._bindings.readValue(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid);
+};
+
+Noble.prototype.onValueRead = function(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid, data) {
+  var descriptor = this._descriptors[peripheralUuid][serviceUuid][characteristicUuid][descriptorUuid];
+
+  if (descriptor) {
+    descriptor.emit('valueRead', data);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ', ' + descriptorUuid + ' value read!');
+  }
+};
+
+Noble.prototype.writeValue = function(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid, data) {
+  this._bindings.writeValue(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid, data);
+};
+
+Noble.prototype.onValueWrite = function(peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid) {
+  var descriptor = this._descriptors[peripheralUuid][serviceUuid][characteristicUuid][descriptorUuid];
+
+  if (descriptor) {
+    descriptor.emit('valueWrite');
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ', ' + descriptorUuid + ' value write!');
+  }
+};
+
+Noble.prototype.readHandle = function(peripheralUuid, handle) {
+  this._bindings.readHandle(peripheralUuid, handle);
+};
+
+Noble.prototype.onHandleRead = function(peripheralUuid, handle, data) {
+  var peripheral = this._peripherals[peripheralUuid];
+
+  if (peripheral) {
+    peripheral.emit('handleRead' + handle, data);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' handle read!');
+  }
+};
+
+Noble.prototype.writeHandle = function(peripheralUuid, handle, data, withoutResponse) {
+  this._bindings.writeHandle(peripheralUuid, handle, data, withoutResponse);
+};
+
+Noble.prototype.onHandleWrite = function(peripheralUuid, handle) {
+  var peripheral = this._peripherals[peripheralUuid];
+
+  if (peripheral) {
+    peripheral.emit('handleWrite' + handle);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' handle write!');
+  }
+};
+
+Noble.prototype.onHandleNotify = function(peripheralUuid, handle, data) {
+  var peripheral = this._peripherals[peripheralUuid];
+
+  if (peripheral) {
+    peripheral.emit('handleNotify', handle, data);
+  } else {
+    this.emit('warning', 'unknown peripheral ' + peripheralUuid + ' handle notify!');
+  }
+};
+
+module.exports = Noble;
+
+
+/***/ }),
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(Buffer) {/*jshint loopfunc: true */
@@ -5835,23 +6513,7 @@ module.exports = Peripheral;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 16 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/* WEBPACK VAR INJECTION */(function(process) {function resolveBindings(){
-  if (navigator.bluetooth && !process.env.NOBLE_WEBSOCKET) {
-    return __webpack_require__(7);
-  }
-
-  return __webpack_require__(19);
-}
-
-module.exports = resolveBindings;
-
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
-
-/***/ }),
-/* 17 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var debug = __webpack_require__(3)('service');
@@ -5859,7 +6521,7 @@ var debug = __webpack_require__(3)('service');
 var events = __webpack_require__(1);
 var util = __webpack_require__(2);
 
-var services = __webpack_require__(18);
+var services = __webpack_require__(26);
 
 function Service(noble, peripheralId, uuid) {
   this._noble = noble;
@@ -5921,7 +6583,7 @@ module.exports = Service;
 
 
 /***/ }),
-/* 18 */
+/* 26 */
 /***/ (function(module, exports) {
 
 module.exports = {
@@ -6048,143 +6710,162 @@ module.exports = {
 };
 
 /***/ }),
-/* 19 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(process, Buffer) {var events = __webpack_require__(1);
-var util = __webpack_require__(2);
+/* WEBPACK VAR INJECTION */(function(process, Buffer) {var util = __webpack_require__(2);
+var events = __webpack_require__(1);
 
-var debug = __webpack_require__(3)('bindings');
-var WebSocket = __webpack_require__(22);
+var debug = __webpack_require__(3)('webble-bindings');
+
+function makeList(uuid){
+  return {services:[ uuid ]};
+}
+
+function addDashes(uuid){
+  if(!uuid || typeof uuid !== 'string'){
+    return uuid;
+  }
+  if(uuid && uuid.length === 32){
+    uuid = uuid.substring(0,8) + '-' + uuid.substring(8,12) + '-' +  uuid.substring(12,16) + '-' +  uuid.substring(16,20) + '-' +  uuid.substring(20);
+  }
+  return uuid.toLowerCase();
+}
+
+function stripDashes(uuid){
+  if(typeof uuid === 'string'){
+    uuid = uuid.split('-').join('');
+  }
+  return uuid;
+}
+
+function formatService(service){
+  //web bluetooth requires 4 char hex service names to be passed in as integers
+  if(typeof service === 'string' && service.length === 4){
+    service = parseInt('0x' + service);
+  }
+  else if(typeof service === 'string' && service.length === 6 && service.indexOf('0x') === 0){
+    service = parseInt(service);
+  }
+  return service;
+}
 
 var NobleBindings = function() {
-  var port = 0xB1e;
-  this._ws = new WebSocket('ws://localhost:' + port);
 
+  this._ble = null;
   this._startScanCommand = null;
   this._peripherals = {};
 
-  this.on('message', this._onMessage.bind(this));
+  var self = this;
 
-  if (!this._ws.on) {
-    this._ws.on = this._ws.addEventListener;
+};
+util.inherits(NobleBindings, events.EventEmitter);
+
+NobleBindings.prototype.init = function(ble) {
+
+  if(ble) {
+    this._ble = ble;
+  }else {
+    this._ble = navigator.bluetooth;
   }
 
-  this._ws.on('open', this._onOpen.bind(this));
-  this._ws.on('close', this._onClose.bind(this));
-
-  var _this = this;
-  this._ws.on('message', function(event) {
-    var data = (process.title === 'browser') ? event.data : event;
-
-    _this.emit('message', JSON.parse(data));
+  var self = this;
+  process.nextTick(function(){
+    debug('initing');
+    if(!self._ble){
+      return self.emit('error', new Error('This browser does not support WebBluetooth.'));
+    }
+    debug('emit powered on');
+    self.emit('stateChange', 'poweredOn');
   });
 };
 
-util.inherits(NobleBindings, events.EventEmitter);
 
-NobleBindings.prototype.init = function() {
-  // no-op
+NobleBindings.prototype.onOpen = function() {
+  debug('on -> open');
 };
 
-NobleBindings.prototype._onOpen = function() {
-  console.log('on -> open');
-};
-
-NobleBindings.prototype._onClose = function() {
-  console.log('on -> close');
+NobleBindings.prototype.onClose = function() {
+  debug('on -> close');
 
   this.emit('stateChange', 'poweredOff');
 };
 
-NobleBindings.prototype._onMessage = function(event) {
-  var type = event.type;
-  var peripheralUuid = event.peripheralUuid;
-  var address = event.address;
-  var addressType = event.addressType;
-  var connectable = event.connectable;
-  var advertisement = event.advertisement;
-  var rssi = event.rssi;
-  var serviceUuids = event.serviceUuids;
-  var serviceUuid = event.serviceUuid;
-  var includedServiceUuids = event.includedServiceUuids;
-  var characteristics = event.characteristics;
-  var characteristicUuid = event.characteristicUuid;
-  var data = event.data ? new Buffer(event.data, 'hex') : null;
-  var isNotification = event.isNotification;
-  var state = event.state;
-  var descriptors = event.descriptors;
-  var descriptorUuid = event.descriptorUuid;
-  var handle = event.handle;
+NobleBindings.prototype.startScanning = function(options, allowDuplicates) {
+  var self = this;
 
-  if (type === 'stateChange') {
-    console.log(state);
-    this.emit('stateChange', state);
-  } else if (type === 'discover') {
-    advertisement = {
-      localName: advertisement.localName,
-      txPowerLevel: advertisement.txPowerLevel,
-      serviceUuids: advertisement.serviceUuids,
-      manufacturerData: (advertisement.manufacturerData ? new Buffer(advertisement.manufacturerData, 'hex') : null),
-      serviceData: (advertisement.serviceData ? new Buffer(advertisement.serviceData, 'hex') : null)
-    };
-
-    this._peripherals[peripheralUuid] = {
-      uuid: peripheralUuid,
-      address: address,
-      advertisement: advertisement,
-      rssi: rssi
-    };
-
-    this.emit('discover', peripheralUuid, address, addressType, connectable, advertisement, rssi);
-  } else if (type === 'connect') {
-    this.emit('connect', peripheralUuid);
-  } else if (type === 'disconnect') {
-    this.emit('disconnect', peripheralUuid);
-  } else if (type === 'rssiUpdate') {
-    this.emit('rssiUpdate', peripheralUuid, rssi);
-  } else if (type === 'servicesDiscover') {
-    this.emit('servicesDiscover', peripheralUuid, serviceUuids);
-  } else if (type === 'includedServicesDiscover') {
-    this.emit('includedServicesDiscover', peripheralUuid, serviceUuid, includedServiceUuids);
-  } else if (type === 'characteristicsDiscover') {
-    this.emit('characteristicsDiscover', peripheralUuid, serviceUuid, characteristics);
-  } else if (type === 'read') {
-    this.emit('read', peripheralUuid, serviceUuid, characteristicUuid, data, isNotification);
-  } else if (type === 'write') {
-    this.emit('write', peripheralUuid, serviceUuid, characteristicUuid);
-  } else if (type === 'broadcast') {
-    this.emit('broadcast', peripheralUuid, serviceUuid, characteristicUuid, state);
-  } else if (type === 'notify') {
-    this.emit('notify', peripheralUuid, serviceUuid, characteristicUuid, state);
-  } else if (type === 'descriptorsDiscover') {
-    this.emit('descriptorsDiscover', peripheralUuid, serviceUuid, characteristicUuid, descriptors);
-  } else if (type === 'valueRead') {
-    this.emit('valueRead', peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid, data);
-  } else if (type === 'valueWrite') {
-    this.emit('valueWrite', peripheralUuid, serviceUuid, characteristicUuid, descriptorUuid);
-  } else if (type === 'handleRead') {
-    this.emit('handleRead', peripheralUuid, handle, data);
-  } else if (type === 'handleWrite') {
-    this.emit('handleWrite', peripheralUuid, handle);
-  } else if (type === 'handleNotify') {
-    this.emit('handleNotify', peripheralUuid, handle, data);
+  if(Array.isArray(options)){
+    options = {services: options};
   }
-};
 
-NobleBindings.prototype._sendCommand = function(command) {
-  var message = JSON.stringify(command);
+  if(typeof options !== 'object'){
+    options = {services: options};
+  }
 
-  this._ws.send(message);
-};
+  if(options.services && !Array.isArray(options.services)){
+    options.services = [options.services];
+  }
 
-NobleBindings.prototype.startScanning = function(serviceUuids, allowDuplicates) {
-  this._startScanCommand = {
-    action: 'startScanning',
-    serviceUuids: serviceUuids,
-    allowDuplicates: allowDuplicates
-  };
-  this._sendCommand(this._startScanCommand);
+  var request = {};
+
+  if(options.services || options.name || options.namePrefix) {
+    options.services = options.services.map(formatService);
+
+    var dashedUuids = options.services.map(addDashes);
+
+    var filterList = dashedUuids.map(makeList);
+    if(options.name) {
+      filterList.push({name: options.name});
+    }
+    if(options.namePrefix) {
+      filterList.push({namePrefix: options.namePrefix});
+    }
+    request.filters = filterList;
+  } else {
+    request.acceptAllDevices = true;
+  }
+
+  if(options.optionalServices) {
+    if(!Array.isArray(options.optionalServices)){
+      options.optionalServices = [options.optionalServices];
+    }
+    options.optionalServices = options.optionalServices.map(formatService);
+    request.optionalServices = options.optionalServices.map(addDashes);
+  }
+
+  debug('startScanning', request, allowDuplicates);
+
+  this._ble.requestDevice(request)
+    .then(function(device){
+      debug('scan finished', device);
+      self.emit('scanStop', {});
+      if(device){
+
+        var address = device.id;
+        //TODO use device.adData when api is ready
+        //rssi = device.adData.rssi;
+
+        self._peripherals[address] = {
+          uuid: address,
+          address: address,
+          advertisement: {localName:device.name}, //advertisement,
+          device: device,
+          cachedServices: {},
+          localName: device.name,
+          serviceUuids: options.services
+        };
+        if(device.adData){
+          self._peripherals[address].rssi = device.adData.rssi;
+        }
+
+        self.emit('discover', device.id, device.id, device.addressType, !device.paired, self._peripherals[address].advertisement, self._peripherals[address].rssi);
+      }
+    })
+    .catch(function(err){
+      debug('err scanning', err);
+      self.emit('scanStop', {});
+      self.emit('error', err);
+    });
 
   this.emit('scanStart');
 };
@@ -6192,570 +6873,263 @@ NobleBindings.prototype.startScanning = function(serviceUuids, allowDuplicates) 
 NobleBindings.prototype.stopScanning = function() {
   this._startScanCommand = null;
 
-  this._sendCommand({
-    action: 'stopScanning'
-  });
-
+  //TODO: need web api completed for this to work'=
   this.emit('scanStop');
 };
 
 NobleBindings.prototype.connect = function(deviceUuid) {
+  var self = this;
+  debug('connect', deviceUuid);
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'connect',
-    peripheralUuid: peripheral.uuid
-  });
+  // Attempts to connect to remote GATT Server.
+  peripheral.device.gatt.connect()
+    .then(function(gattServer){
+      debug('peripheral connected', gattServer);
+      self.emit('connect', deviceUuid);
+    }, function(err){
+      debug('err connecting', err);
+      self.emit('connect', deviceUuid, err);
+    });
+
 };
 
 NobleBindings.prototype.disconnect = function(deviceUuid) {
   var peripheral = this._peripherals[deviceUuid];
-
-  this._sendCommand({
-    action: 'disconnect',
-    peripheralUuid: peripheral.uuid
-  });
+  if(peripheral.device.gatt){
+    peripheral.device.gatt.disconnect();
+    this.emit('disconnect', deviceUuid);
+  }
 };
 
 NobleBindings.prototype.updateRssi = function(deviceUuid) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'updateRssi',
-    peripheralUuid: peripheral.uuid
-  });
+  //TODO: need web api completed for this to work
+  // this.emit('rssiUpdate', deviceUuid, rssi);
 };
 
 NobleBindings.prototype.discoverServices = function(deviceUuid, uuids) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'discoverServices',
-    peripheralUuid: peripheral.uuid,
-    uuids: uuids
-  });
+  //TODO: need web api completed for this to work
+  if(peripheral){
+    this.emit('servicesDiscover', deviceUuid, peripheral.serviceUuids || uuids);
+  }
+
 };
 
 NobleBindings.prototype.discoverIncludedServices = function(deviceUuid, serviceUuid, serviceUuids) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'discoverIncludedServices',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    serviceUuids: serviceUuids
-  });
+  //TODO impelment when web API has functionatility then emit response
+  //this.emit('includedServicesDiscover', deviceUuid, serviceUuid, includedServiceUuids);
 };
 
 NobleBindings.prototype.discoverCharacteristics = function(deviceUuid, serviceUuid, characteristicUuids) {
-  var peripheral = this._peripherals[deviceUuid];
+  var self = this;
+  var peripheral = self._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'discoverCharacteristics',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    characteristicUuids: characteristicUuids
-  });
+  if(peripheral){
+
+    self.getPrimaryService(peripheral, serviceUuid)
+      .then(function(service){
+        return service.getCharacteristics();
+      })
+      .then(function(characteristics) {
+        var discoveredCharateristcs = characteristics.map(function(char){
+          var charInfo = {uuid: stripDashes(char.uuid), properties: []};
+
+          if(char.properties.writeWithoutResponse){
+            charInfo.properties.push('writeWithoutResponse');
+          }
+
+          if(char.properties.write){
+            charInfo.properties.push('write');
+          }
+
+          if(char.properties.read){
+            charInfo.properties.push('read');
+          }
+
+          if(char.properties.notify){
+            charInfo.properties.push('notify');
+          }
+
+          return charInfo;
+        });
+
+        debug('discoverCharacteristics', deviceUuid, serviceUuid, discoveredCharateristcs);
+        self.emit('characteristicsDiscover', deviceUuid, serviceUuid, discoveredCharateristcs);
+
+      });
+  }
+
+};
+
+NobleBindings.prototype.getPrimaryService = function(peripheral, serviceUuid){
+  serviceUuid = addDashes(serviceUuid);
+
+  if(peripheral.cachedServices[serviceUuid]){
+    return new Promise(function(resolve, reject){
+      resolve(peripheral.cachedServices[serviceUuid]);
+    });
+  }
+
+  return peripheral.device.gatt.getPrimaryService(serviceUuid)
+    .then(function(service){
+      peripheral.cachedServices[serviceUuid] = service;
+      return service;
+    });
 };
 
 NobleBindings.prototype.read = function(deviceUuid, serviceUuid, characteristicUuid) {
+  var self = this;
   var peripheral = this._peripherals[deviceUuid];
+  debug('read', deviceUuid, serviceUuid, characteristicUuid);
 
-  this._sendCommand({
-    action: 'read',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid
-  });
+  self.getPrimaryService(peripheral, serviceUuid)
+    .then(function(service){
+      return service.getCharacteristic(addDashes(characteristicUuid));
+    })
+    .then(function(characteristic) {
+      return characteristic.readValue();
+    })
+    .then(function(data){
+      self.emit('read', peripheral.uuid, serviceUuid, characteristicUuid, new Buffer(data.buffer), false);
+    })
+    .catch(function(err) {
+      debug('error reading characteristic', err);
+      self.emit('error', err);
+    });
 };
 
 NobleBindings.prototype.write = function(deviceUuid, serviceUuid, characteristicUuid, data, withoutResponse) {
+  var self = this;
   var peripheral = this._peripherals[deviceUuid];
+  debug('write', deviceUuid, serviceUuid, characteristicUuid, data, withoutResponse);
 
-  this._sendCommand({
-    action: 'write',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    data: data.toString('hex'),
-    withoutResponse: withoutResponse
-  });
+  self.getPrimaryService(peripheral, serviceUuid)
+    .then(function(service){
+      return service.getCharacteristic(addDashes(characteristicUuid));
+    })
+    .then(function(characteristic) {
+      return characteristic.writeValue(data);
+    })
+    .then(function(){
+      debug('value written');
+      self.emit('write', peripheral.uuid, serviceUuid, characteristicUuid);
+    })
+    .catch(function(err) {
+      debug('error writing to characteristic', serviceUuid, characteristicUuid, err);
+    });
+
 };
 
 NobleBindings.prototype.broadcast = function(deviceUuid, serviceUuid, characteristicUuid, broadcast) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'broadcast',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    broadcast: broadcast
-  });
+  //TODO impelment when web API has functionatility then emit response
+  //this.emit('broadcast', deviceUuid, serviceUuid, characteristicUuid, state);
 };
 
 NobleBindings.prototype.notify = function(deviceUuid, serviceUuid, characteristicUuid, notify) {
+  var self = this;
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'notify',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    notify: notify
-  });
+  var charPromise = self.getPrimaryService(peripheral, serviceUuid)
+    .then(function(service){
+      return service.getCharacteristic(addDashes(characteristicUuid));
+    });
+
+  peripheral.notifcationListeners = peripheral.notifcationListeners || {};
+
+  if(notify){
+    charPromise.then(function(characteristic) {
+      return characteristic.startNotifications();
+    })
+    .then(function(characteristic){
+      debug('notifications started', characteristicUuid);
+      peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid] = function(evt){
+        debug('oncharacteristicvaluechanged', evt, new Buffer(evt.target.value.buffer));
+        self.emit('read', deviceUuid, serviceUuid, characteristicUuid, new Buffer(evt.target.value.buffer), true);
+      };
+      characteristic.addEventListener('characteristicvaluechanged', peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid]);
+      self.emit('notify', deviceUuid, serviceUuid, characteristicUuid, true);
+      return characteristic;
+    })
+    .catch(function(err) {
+      debug('error enabling notifications on characteristic', err);
+      self.emit('error', err);
+    });
+  }
+  else{
+    charPromise.then(function(characteristic) {
+      return characteristic.stopNotifications();
+    })
+    .then(function(characteristic){
+      debug('notifications stopped', characteristic);
+      if(peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid]){
+        characteristic.removeEventListener('characteristicvaluechanged', peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid]);
+        delete peripheral.notifcationListeners[serviceUuid + '__' + characteristicUuid];
+      }
+      self.emit('notify', deviceUuid, serviceUuid, characteristicUuid, false);
+      return characteristic;
+    })
+    .catch(function(err) {
+      debug('error disabling notifications on characteristic', err);
+      self.emit('error', err);
+    });
+  }
+
 };
 
 NobleBindings.prototype.discoverDescriptors = function(deviceUuid, serviceUuid, characteristicUuid) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'discoverDescriptors',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid
-  });
+  //TODO impelment when web API has functionatility then emit response
+  //this.emit('descriptorsDiscover', deviceUuid, serviceUuid, characteristicUuid, descriptors);
 };
 
 NobleBindings.prototype.readValue = function(deviceUuid, serviceUuid, characteristicUuid, descriptorUuid) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'readValue',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    descriptorUuid: descriptorUuid
-  });
+  //TODO impelment when web API has functionatility then emit response
+  //this.emit('valueRead', deviceUuid, serviceUuid, characteristicUuid, descriptorUuid, data);
 };
 
 NobleBindings.prototype.writeValue = function(deviceUuid, serviceUuid, characteristicUuid, descriptorUuid, data) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'writeValue',
-    peripheralUuid: peripheral.uuid,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    descriptorUuid: descriptorUuid,
-    data: data.toString('hex')
-  });
+  //TODO impelment when web API has functionatility then emit response
+  //this.emit('valueWrite', deviceUuid, serviceUuid, characteristicUuid, descriptorUuid);
 };
 
 NobleBindings.prototype.readHandle = function(deviceUuid, handle) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'readHandle',
-    peripheralUuid: peripheral.uuid,
-    handle: handle
-  });
+  //TODO impelment when web API has functionatility then emit response
+  //this.emit('handleRead', deviceUuid, handle, data);
 };
 
 NobleBindings.prototype.writeHandle = function(deviceUuid, handle, data, withoutResponse) {
   var peripheral = this._peripherals[deviceUuid];
 
-  this._sendCommand({
-    action: 'writeHandle',
-    peripheralUuid: peripheral.uuid,
-    handle: handle,
-    data: data.toString('hex'),
-    withoutResponse: withoutResponse
-  });
+  //TODO impelment when web API has functionatility then emit response
+  //this.emit('handleWrite', deviceUuid, handle);
 };
 
-module.exports = new NobleBindings();
+var nobleBindings = new NobleBindings();
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(0).Buffer))
+module.exports = nobleBindings;
+
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5), __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 20 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
-
-/**
- * This is the common logic for both the Node.js and web browser
- * implementations of `debug()`.
- *
- * Expose `debug()` as the module.
- */
-
-exports = module.exports = debug;
-exports.coerce = coerce;
-exports.disable = disable;
-exports.enable = enable;
-exports.enabled = enabled;
-exports.humanize = __webpack_require__(21);
-
-/**
- * The currently active debug mode names, and names to skip.
- */
-
-exports.names = [];
-exports.skips = [];
-
-/**
- * Map of special "%n" handling functions, for the debug "format" argument.
- *
- * Valid key names are a single, lowercased letter, i.e. "n".
- */
-
-exports.formatters = {};
-
-/**
- * Previously assigned color.
- */
-
-var prevColor = 0;
-
-/**
- * Previous log timestamp.
- */
-
-var prevTime;
-
-/**
- * Select a color.
- *
- * @return {Number}
- * @api private
- */
-
-function selectColor() {
-  return exports.colors[prevColor++ % exports.colors.length];
-}
-
-/**
- * Create a debugger with the given `namespace`.
- *
- * @param {String} namespace
- * @return {Function}
- * @api public
- */
-
-function debug(namespace) {
-
-  // define the `disabled` version
-  function disabled() {
-  }
-  disabled.enabled = false;
-
-  // define the `enabled` version
-  function enabled() {
-
-    var self = enabled;
-
-    // set `diff` timestamp
-    var curr = +new Date();
-    var ms = curr - (prevTime || curr);
-    self.diff = ms;
-    self.prev = prevTime;
-    self.curr = curr;
-    prevTime = curr;
-
-    // add the `color` if not set
-    if (null == self.useColors) self.useColors = exports.useColors();
-    if (null == self.color && self.useColors) self.color = selectColor();
-
-    var args = Array.prototype.slice.call(arguments);
-
-    args[0] = exports.coerce(args[0]);
-
-    if ('string' !== typeof args[0]) {
-      // anything else let's inspect with %o
-      args = ['%o'].concat(args);
-    }
-
-    // apply any `formatters` transformations
-    var index = 0;
-    args[0] = args[0].replace(/%([a-z%])/g, function(match, format) {
-      // if we encounter an escaped % then don't increase the array index
-      if (match === '%%') return match;
-      index++;
-      var formatter = exports.formatters[format];
-      if ('function' === typeof formatter) {
-        var val = args[index];
-        match = formatter.call(self, val);
-
-        // now we need to remove `args[index]` since it's inlined in the `format`
-        args.splice(index, 1);
-        index--;
-      }
-      return match;
-    });
-
-    if ('function' === typeof exports.formatArgs) {
-      args = exports.formatArgs.apply(self, args);
-    }
-    var logFn = enabled.log || exports.log || console.log.bind(console);
-    logFn.apply(self, args);
-  }
-  enabled.enabled = true;
-
-  var fn = exports.enabled(namespace) ? enabled : disabled;
-
-  fn.namespace = namespace;
-
-  return fn;
-}
-
-/**
- * Enables a debug mode by namespaces. This can include modes
- * separated by a colon and wildcards.
- *
- * @param {String} namespaces
- * @api public
- */
-
-function enable(namespaces) {
-  exports.save(namespaces);
-
-  var split = (namespaces || '').split(/[\s,]+/);
-  var len = split.length;
-
-  for (var i = 0; i < len; i++) {
-    if (!split[i]) continue; // ignore empty strings
-    namespaces = split[i].replace(/\*/g, '.*?');
-    if (namespaces[0] === '-') {
-      exports.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
-    } else {
-      exports.names.push(new RegExp('^' + namespaces + '$'));
-    }
-  }
-}
-
-/**
- * Disable debug output.
- *
- * @api public
- */
-
-function disable() {
-  exports.enable('');
-}
-
-/**
- * Returns true if the given mode name is enabled, false otherwise.
- *
- * @param {String} name
- * @return {Boolean}
- * @api public
- */
-
-function enabled(name) {
-  var i, len;
-  for (i = 0, len = exports.skips.length; i < len; i++) {
-    if (exports.skips[i].test(name)) {
-      return false;
-    }
-  }
-  for (i = 0, len = exports.names.length; i < len; i++) {
-    if (exports.names[i].test(name)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Coerce `val`.
- *
- * @param {Mixed} val
- * @return {Mixed}
- * @api private
- */
-
-function coerce(val) {
-  if (val instanceof Error) return val.stack || val.message;
-  return val;
-}
-
-
-/***/ }),
-/* 21 */
-/***/ (function(module, exports) {
-
-/**
- * Helpers.
- */
-
-var s = 1000;
-var m = s * 60;
-var h = m * 60;
-var d = h * 24;
-var y = d * 365.25;
-
-/**
- * Parse or format the given `val`.
- *
- * Options:
- *
- *  - `long` verbose formatting [false]
- *
- * @param {String|Number} val
- * @param {Object} options
- * @return {String|Number}
- * @api public
- */
-
-module.exports = function(val, options){
-  options = options || {};
-  if ('string' == typeof val) return parse(val);
-  return options.long
-    ? long(val)
-    : short(val);
-};
-
-/**
- * Parse the given `str` and return milliseconds.
- *
- * @param {String} str
- * @return {Number}
- * @api private
- */
-
-function parse(str) {
-  str = '' + str;
-  if (str.length > 10000) return;
-  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(str);
-  if (!match) return;
-  var n = parseFloat(match[1]);
-  var type = (match[2] || 'ms').toLowerCase();
-  switch (type) {
-    case 'years':
-    case 'year':
-    case 'yrs':
-    case 'yr':
-    case 'y':
-      return n * y;
-    case 'days':
-    case 'day':
-    case 'd':
-      return n * d;
-    case 'hours':
-    case 'hour':
-    case 'hrs':
-    case 'hr':
-    case 'h':
-      return n * h;
-    case 'minutes':
-    case 'minute':
-    case 'mins':
-    case 'min':
-    case 'm':
-      return n * m;
-    case 'seconds':
-    case 'second':
-    case 'secs':
-    case 'sec':
-    case 's':
-      return n * s;
-    case 'milliseconds':
-    case 'millisecond':
-    case 'msecs':
-    case 'msec':
-    case 'ms':
-      return n;
-  }
-}
-
-/**
- * Short format for `ms`.
- *
- * @param {Number} ms
- * @return {String}
- * @api private
- */
-
-function short(ms) {
-  if (ms >= d) return Math.round(ms / d) + 'd';
-  if (ms >= h) return Math.round(ms / h) + 'h';
-  if (ms >= m) return Math.round(ms / m) + 'm';
-  if (ms >= s) return Math.round(ms / s) + 's';
-  return ms + 'ms';
-}
-
-/**
- * Long format for `ms`.
- *
- * @param {Number} ms
- * @return {String}
- * @api private
- */
-
-function long(ms) {
-  return plural(ms, d, 'day')
-    || plural(ms, h, 'hour')
-    || plural(ms, m, 'minute')
-    || plural(ms, s, 'second')
-    || ms + ' ms';
-}
-
-/**
- * Pluralization helper.
- */
-
-function plural(ms, n, name) {
-  if (ms < n) return;
-  if (ms < n * 1.5) return Math.floor(ms / n) + ' ' + name;
-  return Math.ceil(ms / n) + ' ' + name + 's';
-}
-
-
-/***/ }),
-/* 22 */
-/***/ (function(module, exports) {
-
-
-/**
- * Module dependencies.
- */
-
-var global = (function() { return this; })();
-
-/**
- * WebSocket constructor.
- */
-
-var WebSocket = global.WebSocket || global.MozWebSocket;
-
-/**
- * Module exports.
- */
-
-module.exports = WebSocket ? ws : null;
-
-/**
- * WebSocket constructor.
- *
- * The third `opts` options object gets ignored in web browsers, since it's
- * non-standard, and throws a TypeError if passed to the constructor.
- * See: https://github.com/einaros/ws/issues/227
- *
- * @param {String} uri
- * @param {Array} protocols (optional)
- * @param {Object) opts (optional)
- * @api public
- */
-
-function ws(uri, protocols, opts) {
-  var instance;
-  if (protocols) {
-    instance = new WebSocket(uri, protocols);
-  } else {
-    instance = new WebSocket(uri);
-  }
-  return instance;
-}
-
-if (WebSocket) ws.prototype = WebSocket.prototype;
-
-
-/***/ }),
-/* 23 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var Noble = __webpack_require__(6);
+var Noble = __webpack_require__(23);
 
 module.exports = function(bindings) {
   return new Noble(bindings);
@@ -6763,540 +7137,23 @@ module.exports = function(bindings) {
 
 
 /***/ }),
-/* 24 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-exports.byteLength = byteLength
-exports.toByteArray = toByteArray
-exports.fromByteArray = fromByteArray
-
-var lookup = []
-var revLookup = []
-var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array
-
-var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-for (var i = 0, len = code.length; i < len; ++i) {
-  lookup[i] = code[i]
-  revLookup[code.charCodeAt(i)] = i
-}
-
-revLookup['-'.charCodeAt(0)] = 62
-revLookup['_'.charCodeAt(0)] = 63
-
-function placeHoldersCount (b64) {
-  var len = b64.length
-  if (len % 4 > 0) {
-    throw new Error('Invalid string. Length must be a multiple of 4')
-  }
-
-  // the number of equal signs (place holders)
-  // if there are two placeholders, than the two characters before it
-  // represent one byte
-  // if there is only one, then the three characters before it represent 2 bytes
-  // this is just a cheap hack to not do indexOf twice
-  return b64[len - 2] === '=' ? 2 : b64[len - 1] === '=' ? 1 : 0
-}
-
-function byteLength (b64) {
-  // base64 is 4/3 + up to two characters of the original data
-  return b64.length * 3 / 4 - placeHoldersCount(b64)
-}
-
-function toByteArray (b64) {
-  var i, j, l, tmp, placeHolders, arr
-  var len = b64.length
-  placeHolders = placeHoldersCount(b64)
-
-  arr = new Arr(len * 3 / 4 - placeHolders)
-
-  // if there are placeholders, only get up to the last complete 4 chars
-  l = placeHolders > 0 ? len - 4 : len
-
-  var L = 0
-
-  for (i = 0, j = 0; i < l; i += 4, j += 3) {
-    tmp = (revLookup[b64.charCodeAt(i)] << 18) | (revLookup[b64.charCodeAt(i + 1)] << 12) | (revLookup[b64.charCodeAt(i + 2)] << 6) | revLookup[b64.charCodeAt(i + 3)]
-    arr[L++] = (tmp >> 16) & 0xFF
-    arr[L++] = (tmp >> 8) & 0xFF
-    arr[L++] = tmp & 0xFF
-  }
-
-  if (placeHolders === 2) {
-    tmp = (revLookup[b64.charCodeAt(i)] << 2) | (revLookup[b64.charCodeAt(i + 1)] >> 4)
-    arr[L++] = tmp & 0xFF
-  } else if (placeHolders === 1) {
-    tmp = (revLookup[b64.charCodeAt(i)] << 10) | (revLookup[b64.charCodeAt(i + 1)] << 4) | (revLookup[b64.charCodeAt(i + 2)] >> 2)
-    arr[L++] = (tmp >> 8) & 0xFF
-    arr[L++] = tmp & 0xFF
-  }
-
-  return arr
-}
-
-function tripletToBase64 (num) {
-  return lookup[num >> 18 & 0x3F] + lookup[num >> 12 & 0x3F] + lookup[num >> 6 & 0x3F] + lookup[num & 0x3F]
-}
-
-function encodeChunk (uint8, start, end) {
-  var tmp
-  var output = []
-  for (var i = start; i < end; i += 3) {
-    tmp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
-    output.push(tripletToBase64(tmp))
-  }
-  return output.join('')
-}
-
-function fromByteArray (uint8) {
-  var tmp
-  var len = uint8.length
-  var extraBytes = len % 3 // if we have 1 byte left, pad 2 bytes
-  var output = ''
-  var parts = []
-  var maxChunkLength = 16383 // must be multiple of 3
-
-  // go through the array every three bytes, we'll deal with trailing stuff later
-  for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
-    parts.push(encodeChunk(uint8, i, (i + maxChunkLength) > len2 ? len2 : (i + maxChunkLength)))
-  }
-
-  // pad the end with zeros, but make sure to not forget the extra bytes
-  if (extraBytes === 1) {
-    tmp = uint8[len - 1]
-    output += lookup[tmp >> 2]
-    output += lookup[(tmp << 4) & 0x3F]
-    output += '=='
-  } else if (extraBytes === 2) {
-    tmp = (uint8[len - 2] << 8) + (uint8[len - 1])
-    output += lookup[tmp >> 10]
-    output += lookup[(tmp >> 4) & 0x3F]
-    output += lookup[(tmp << 2) & 0x3F]
-    output += '='
-  }
-
-  parts.push(output)
-
-  return parts.join('')
-}
-
-
-/***/ }),
-/* 25 */
-/***/ (function(module, exports) {
-
-(function() {
-  var base64map
-      = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
-
-  crypt = {
-    // Bit-wise rotation left
-    rotl: function(n, b) {
-      return (n << b) | (n >>> (32 - b));
-    },
-
-    // Bit-wise rotation right
-    rotr: function(n, b) {
-      return (n << (32 - b)) | (n >>> b);
-    },
-
-    // Swap big-endian to little-endian and vice versa
-    endian: function(n) {
-      // If number given, swap endian
-      if (n.constructor == Number) {
-        return crypt.rotl(n, 8) & 0x00FF00FF | crypt.rotl(n, 24) & 0xFF00FF00;
-      }
-
-      // Else, assume array and swap all items
-      for (var i = 0; i < n.length; i++)
-        n[i] = crypt.endian(n[i]);
-      return n;
-    },
-
-    // Generate an array of any length of random bytes
-    randomBytes: function(n) {
-      for (var bytes = []; n > 0; n--)
-        bytes.push(Math.floor(Math.random() * 256));
-      return bytes;
-    },
-
-    // Convert a byte array to big-endian 32-bit words
-    bytesToWords: function(bytes) {
-      for (var words = [], i = 0, b = 0; i < bytes.length; i++, b += 8)
-        words[b >>> 5] |= bytes[i] << (24 - b % 32);
-      return words;
-    },
-
-    // Convert big-endian 32-bit words to a byte array
-    wordsToBytes: function(words) {
-      for (var bytes = [], b = 0; b < words.length * 32; b += 8)
-        bytes.push((words[b >>> 5] >>> (24 - b % 32)) & 0xFF);
-      return bytes;
-    },
-
-    // Convert a byte array to a hex string
-    bytesToHex: function(bytes) {
-      for (var hex = [], i = 0; i < bytes.length; i++) {
-        hex.push((bytes[i] >>> 4).toString(16));
-        hex.push((bytes[i] & 0xF).toString(16));
-      }
-      return hex.join('');
-    },
-
-    // Convert a hex string to a byte array
-    hexToBytes: function(hex) {
-      for (var bytes = [], c = 0; c < hex.length; c += 2)
-        bytes.push(parseInt(hex.substr(c, 2), 16));
-      return bytes;
-    },
-
-    // Convert a byte array to a base-64 string
-    bytesToBase64: function(bytes) {
-      for (var base64 = [], i = 0; i < bytes.length; i += 3) {
-        var triplet = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
-        for (var j = 0; j < 4; j++)
-          if (i * 8 + j * 6 <= bytes.length * 8)
-            base64.push(base64map.charAt((triplet >>> 6 * (3 - j)) & 0x3F));
-          else
-            base64.push('=');
-      }
-      return base64.join('');
-    },
-
-    // Convert a base-64 string to a byte array
-    base64ToBytes: function(base64) {
-      // Remove non-base-64 characters
-      base64 = base64.replace(/[^A-Z0-9+\/]/ig, '');
-
-      for (var bytes = [], i = 0, imod4 = 0; i < base64.length;
-          imod4 = ++i % 4) {
-        if (imod4 == 0) continue;
-        bytes.push(((base64map.indexOf(base64.charAt(i - 1))
-            & (Math.pow(2, -2 * imod4 + 8) - 1)) << (imod4 * 2))
-            | (base64map.indexOf(base64.charAt(i)) >>> (6 - imod4 * 2)));
-      }
-      return bytes;
-    }
-  };
-
-  module.exports = crypt;
-})();
-
-
-/***/ }),
-/* 26 */
-/***/ (function(module, exports) {
-
-exports.read = function (buffer, offset, isLE, mLen, nBytes) {
-  var e, m
-  var eLen = nBytes * 8 - mLen - 1
-  var eMax = (1 << eLen) - 1
-  var eBias = eMax >> 1
-  var nBits = -7
-  var i = isLE ? (nBytes - 1) : 0
-  var d = isLE ? -1 : 1
-  var s = buffer[offset + i]
-
-  i += d
-
-  e = s & ((1 << (-nBits)) - 1)
-  s >>= (-nBits)
-  nBits += eLen
-  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
-
-  m = e & ((1 << (-nBits)) - 1)
-  e >>= (-nBits)
-  nBits += mLen
-  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
-
-  if (e === 0) {
-    e = 1 - eBias
-  } else if (e === eMax) {
-    return m ? NaN : ((s ? -1 : 1) * Infinity)
-  } else {
-    m = m + Math.pow(2, mLen)
-    e = e - eBias
-  }
-  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
-}
-
-exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
-  var e, m, c
-  var eLen = nBytes * 8 - mLen - 1
-  var eMax = (1 << eLen) - 1
-  var eBias = eMax >> 1
-  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
-  var i = isLE ? 0 : (nBytes - 1)
-  var d = isLE ? 1 : -1
-  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
-
-  value = Math.abs(value)
-
-  if (isNaN(value) || value === Infinity) {
-    m = isNaN(value) ? 1 : 0
-    e = eMax
-  } else {
-    e = Math.floor(Math.log(value) / Math.LN2)
-    if (value * (c = Math.pow(2, -e)) < 1) {
-      e--
-      c *= 2
-    }
-    if (e + eBias >= 1) {
-      value += rt / c
-    } else {
-      value += rt * Math.pow(2, 1 - eBias)
-    }
-    if (value * c >= 2) {
-      e++
-      c /= 2
-    }
-
-    if (e + eBias >= eMax) {
-      m = 0
-      e = eMax
-    } else if (e + eBias >= 1) {
-      m = (value * c - 1) * Math.pow(2, mLen)
-      e = e + eBias
-    } else {
-      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
-      e = 0
-    }
-  }
-
-  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
-
-  e = (e << mLen) | m
-  eLen += mLen
-  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
-
-  buffer[offset + i - d] |= s * 128
-}
-
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports) {
-
-/*!
- * Determine if an object is a Buffer
- *
- * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
- * @license  MIT
- */
-
-// The _isBuffer check is for Safari 5-7 support, because it's missing
-// Object.prototype.constructor. Remove this eventually
-module.exports = function (obj) {
-  return obj != null && (isBuffer(obj) || isSlowBuffer(obj) || !!obj._isBuffer)
-}
-
-function isBuffer (obj) {
-  return !!obj.constructor && typeof obj.constructor.isBuffer === 'function' && obj.constructor.isBuffer(obj)
-}
-
-// For Node v0.10 support. Remove this eventually.
-function isSlowBuffer (obj) {
-  return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
-}
-
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports) {
-
-var toString = {}.toString;
-
-module.exports = Array.isArray || function (arr) {
-  return toString.call(arr) == '[object Array]';
-};
-
-
-/***/ }),
 /* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
-(function(){
-  var crypt = __webpack_require__(25),
-      utf8 = __webpack_require__(8).utf8,
-      isBuffer = __webpack_require__(27),
-      bin = __webpack_require__(8).bin,
+/* WEBPACK VAR INJECTION */(function(process) {module.exports = process.env.PROMISE_QUEUE_COVERAGE ?
+    __webpack_require__(30) :
+    __webpack_require__(31);
 
-  // The core
-  md5 = function (message, options) {
-    // Convert to byte array
-    if (message.constructor == String)
-      if (options && options.encoding === 'binary')
-        message = bin.stringToBytes(message);
-      else
-        message = utf8.stringToBytes(message);
-    else if (isBuffer(message))
-      message = Array.prototype.slice.call(message, 0);
-    else if (!Array.isArray(message))
-      message = message.toString();
-    // else, assume byte array already
-
-    var m = crypt.bytesToWords(message),
-        l = message.length * 8,
-        a =  1732584193,
-        b = -271733879,
-        c = -1732584194,
-        d =  271733878;
-
-    // Swap endian
-    for (var i = 0; i < m.length; i++) {
-      m[i] = ((m[i] <<  8) | (m[i] >>> 24)) & 0x00FF00FF |
-             ((m[i] << 24) | (m[i] >>>  8)) & 0xFF00FF00;
-    }
-
-    // Padding
-    m[l >>> 5] |= 0x80 << (l % 32);
-    m[(((l + 64) >>> 9) << 4) + 14] = l;
-
-    // Method shortcuts
-    var FF = md5._ff,
-        GG = md5._gg,
-        HH = md5._hh,
-        II = md5._ii;
-
-    for (var i = 0; i < m.length; i += 16) {
-
-      var aa = a,
-          bb = b,
-          cc = c,
-          dd = d;
-
-      a = FF(a, b, c, d, m[i+ 0],  7, -680876936);
-      d = FF(d, a, b, c, m[i+ 1], 12, -389564586);
-      c = FF(c, d, a, b, m[i+ 2], 17,  606105819);
-      b = FF(b, c, d, a, m[i+ 3], 22, -1044525330);
-      a = FF(a, b, c, d, m[i+ 4],  7, -176418897);
-      d = FF(d, a, b, c, m[i+ 5], 12,  1200080426);
-      c = FF(c, d, a, b, m[i+ 6], 17, -1473231341);
-      b = FF(b, c, d, a, m[i+ 7], 22, -45705983);
-      a = FF(a, b, c, d, m[i+ 8],  7,  1770035416);
-      d = FF(d, a, b, c, m[i+ 9], 12, -1958414417);
-      c = FF(c, d, a, b, m[i+10], 17, -42063);
-      b = FF(b, c, d, a, m[i+11], 22, -1990404162);
-      a = FF(a, b, c, d, m[i+12],  7,  1804603682);
-      d = FF(d, a, b, c, m[i+13], 12, -40341101);
-      c = FF(c, d, a, b, m[i+14], 17, -1502002290);
-      b = FF(b, c, d, a, m[i+15], 22,  1236535329);
-
-      a = GG(a, b, c, d, m[i+ 1],  5, -165796510);
-      d = GG(d, a, b, c, m[i+ 6],  9, -1069501632);
-      c = GG(c, d, a, b, m[i+11], 14,  643717713);
-      b = GG(b, c, d, a, m[i+ 0], 20, -373897302);
-      a = GG(a, b, c, d, m[i+ 5],  5, -701558691);
-      d = GG(d, a, b, c, m[i+10],  9,  38016083);
-      c = GG(c, d, a, b, m[i+15], 14, -660478335);
-      b = GG(b, c, d, a, m[i+ 4], 20, -405537848);
-      a = GG(a, b, c, d, m[i+ 9],  5,  568446438);
-      d = GG(d, a, b, c, m[i+14],  9, -1019803690);
-      c = GG(c, d, a, b, m[i+ 3], 14, -187363961);
-      b = GG(b, c, d, a, m[i+ 8], 20,  1163531501);
-      a = GG(a, b, c, d, m[i+13],  5, -1444681467);
-      d = GG(d, a, b, c, m[i+ 2],  9, -51403784);
-      c = GG(c, d, a, b, m[i+ 7], 14,  1735328473);
-      b = GG(b, c, d, a, m[i+12], 20, -1926607734);
-
-      a = HH(a, b, c, d, m[i+ 5],  4, -378558);
-      d = HH(d, a, b, c, m[i+ 8], 11, -2022574463);
-      c = HH(c, d, a, b, m[i+11], 16,  1839030562);
-      b = HH(b, c, d, a, m[i+14], 23, -35309556);
-      a = HH(a, b, c, d, m[i+ 1],  4, -1530992060);
-      d = HH(d, a, b, c, m[i+ 4], 11,  1272893353);
-      c = HH(c, d, a, b, m[i+ 7], 16, -155497632);
-      b = HH(b, c, d, a, m[i+10], 23, -1094730640);
-      a = HH(a, b, c, d, m[i+13],  4,  681279174);
-      d = HH(d, a, b, c, m[i+ 0], 11, -358537222);
-      c = HH(c, d, a, b, m[i+ 3], 16, -722521979);
-      b = HH(b, c, d, a, m[i+ 6], 23,  76029189);
-      a = HH(a, b, c, d, m[i+ 9],  4, -640364487);
-      d = HH(d, a, b, c, m[i+12], 11, -421815835);
-      c = HH(c, d, a, b, m[i+15], 16,  530742520);
-      b = HH(b, c, d, a, m[i+ 2], 23, -995338651);
-
-      a = II(a, b, c, d, m[i+ 0],  6, -198630844);
-      d = II(d, a, b, c, m[i+ 7], 10,  1126891415);
-      c = II(c, d, a, b, m[i+14], 15, -1416354905);
-      b = II(b, c, d, a, m[i+ 5], 21, -57434055);
-      a = II(a, b, c, d, m[i+12],  6,  1700485571);
-      d = II(d, a, b, c, m[i+ 3], 10, -1894986606);
-      c = II(c, d, a, b, m[i+10], 15, -1051523);
-      b = II(b, c, d, a, m[i+ 1], 21, -2054922799);
-      a = II(a, b, c, d, m[i+ 8],  6,  1873313359);
-      d = II(d, a, b, c, m[i+15], 10, -30611744);
-      c = II(c, d, a, b, m[i+ 6], 15, -1560198380);
-      b = II(b, c, d, a, m[i+13], 21,  1309151649);
-      a = II(a, b, c, d, m[i+ 4],  6, -145523070);
-      d = II(d, a, b, c, m[i+11], 10, -1120210379);
-      c = II(c, d, a, b, m[i+ 2], 15,  718787259);
-      b = II(b, c, d, a, m[i+ 9], 21, -343485551);
-
-      a = (a + aa) >>> 0;
-      b = (b + bb) >>> 0;
-      c = (c + cc) >>> 0;
-      d = (d + dd) >>> 0;
-    }
-
-    return crypt.endian([a, b, c, d]);
-  };
-
-  // Auxiliary functions
-  md5._ff  = function (a, b, c, d, x, s, t) {
-    var n = a + (b & c | ~b & d) + (x >>> 0) + t;
-    return ((n << s) | (n >>> (32 - s))) + b;
-  };
-  md5._gg  = function (a, b, c, d, x, s, t) {
-    var n = a + (b & d | c & ~d) + (x >>> 0) + t;
-    return ((n << s) | (n >>> (32 - s))) + b;
-  };
-  md5._hh  = function (a, b, c, d, x, s, t) {
-    var n = a + (b ^ c ^ d) + (x >>> 0) + t;
-    return ((n << s) | (n >>> (32 - s))) + b;
-  };
-  md5._ii  = function (a, b, c, d, x, s, t) {
-    var n = a + (c ^ (b | ~d)) + (x >>> 0) + t;
-    return ((n << s) | (n >>> (32 - s))) + b;
-  };
-
-  // Package private blocksize
-  md5._blocksize = 16;
-  md5._digestsize = 16;
-
-  module.exports = function (message, options) {
-    if (message === undefined || message === null)
-      throw new Error('Illegal argument ' + message);
-
-    var digestbytes = crypt.wordsToBytes(md5(message, options));
-    return options && options.asBytes ? digestbytes :
-        options && options.asString ? bin.bytesToString(digestbytes) :
-        crypt.bytesToHex(digestbytes);
-  };
-
-})();
-
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5)))
 
 /***/ }),
 /* 30 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/* WEBPACK VAR INJECTION */(function(process) {module.exports = process.env.PROMISE_QUEUE_COVERAGE ?
-    __webpack_require__(31) :
-    __webpack_require__(32);
-
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
-
-/***/ }),
-/* 31 */
 /***/ (function(module, exports) {
 
 
 
 /***/ }),
-/* 32 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/* global define, Promise */
@@ -7484,7 +7341,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/* global defi
 
 
 /***/ }),
-/* 33 */
+/* 32 */
 /***/ (function(module, exports) {
 
 if (typeof Object.create === 'function') {
@@ -7513,7 +7370,7 @@ if (typeof Object.create === 'function') {
 
 
 /***/ }),
-/* 34 */
+/* 33 */
 /***/ (function(module, exports) {
 
 module.exports = function isBuffer(arg) {
@@ -7524,10 +7381,11 @@ module.exports = function isBuffer(arg) {
 }
 
 /***/ }),
-/* 35 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(Buffer) {//const winston = require('winston');
+/* WEBPACK VAR INJECTION */(function(Buffer) {const isNode = __webpack_require__(7);
+const logger = isNode ? __webpack_require__(9) : __webpack_require__(8);
 
 const SBrickAdvertisementData = function () {
     this.uuid = null;
@@ -7539,7 +7397,7 @@ const SBrickAdvertisementData = function () {
 
 SBrickAdvertisementData.parse = function (data) {
     data = data instanceof Buffer ? data : new Buffer(data, 'hex');
-//    winston.debug(data.toString('hex'));
+    logger.debug(data.toString('hex'));
     let i = 0;
     let byteLength = 0;
     let nextByteLength = 2;
@@ -7635,7 +7493,7 @@ module.exports = SBrickAdvertisementData;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 36 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(Buffer) {function SBrickChannel (channelId) {
@@ -7655,10 +7513,10 @@ module.exports = SBrickChannel;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 37 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const md5 = __webpack_require__(29);
+const md5 = __webpack_require__(17);
 
 /**
  * Creates 8-bype password hash, using the first half of md5 hash.
@@ -7674,11 +7532,17 @@ module.exports = function (password) {
 
 
 /***/ }),
-/* 38 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(global) {global.SBrick = __webpack_require__(9);
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5)))
+/* WEBPACK VAR INJECTION */(function(global) {global.SBrick = __webpack_require__(10);
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
+
+/***/ }),
+/* 38 */
+/***/ (function(module, exports) {
+
+module.exports = "noble";
 
 /***/ })
 /******/ ]);
