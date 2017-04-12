@@ -755,4 +755,14 @@ SBrick.scanSBricks = function () {
     });
 };
 
+/**
+ * Get logger instance
+ * to set log level, etc
+ *
+ * @returns {winston|loglevel}
+ */
+SBrick.getLogger = function () {
+    return logger;
+};
+
 module.exports = SBrick;
