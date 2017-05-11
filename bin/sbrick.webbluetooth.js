@@ -4258,9 +4258,19 @@ Characteristic.prototype.toString = function() {
 
 Characteristic.prototype.read = function(callback) {
   if (callback) {
-    this.once('read', function(data) {
-      callback(null, data);
-    });
+    var onRead = function(data, isNotificaton) {
+      // only call the callback if 'read' event and non-notification
+      // 'read' for non-notifications is only present for backwards compatbility
+      if (!isNotificaton) {
+        // remove the listener
+        this.removeListener('read', onRead);
+
+        // call the callback
+        callback(null, data);
+      }
+    }.bind(this);
+
+    this.on('read', onRead);
   }
 
   this._noble.read(
@@ -5109,9 +5119,10 @@ var Characteristic = __webpack_require__(11);
 var Descriptor = __webpack_require__(13);
 
 function Noble(bindings) {
-  this.state = 'unknown';
-  this.address = 'unknown';
+  this.initialized = false;
 
+  this.address = 'unknown';
+  this._state = 'unknown';
   this._bindings = bindings;
   this._peripherals = {};
   this._services = {};
@@ -5147,7 +5158,27 @@ function Noble(bindings) {
     }
   }.bind(this));
 
-  this._bindings.init();
+  //lazy init bindings on first new listener, should be on stateChange
+  this.on('newListener', function(event) {
+    if (event === 'stateChange' && !this.initialized) {
+      this._bindings.init();
+      this.initialized = true;
+    }
+  }.bind(this));
+
+  //or lazy init bindings if someone attempts to get state first
+  Object.defineProperties(this, {
+    state: {
+      get: function () {
+        if (!this.initialized) {
+          this._bindings.init();
+          this.initialized = true;
+        }
+        return this._state;
+      }
+    }
+  });
+
 }
 
 util.inherits(Noble, events.EventEmitter);
@@ -5155,7 +5186,7 @@ util.inherits(Noble, events.EventEmitter);
 Noble.prototype.onStateChange = function(state) {
   debug('stateChange ' + state);
 
-  this.state = state;
+  this._state = state;
 
   this.emit('stateChange', state);
 };
@@ -5167,25 +5198,36 @@ Noble.prototype.onAddressChange = function(address) {
 };
 
 Noble.prototype.startScanning = function(serviceUuids, allowDuplicates, callback) {
-  if (this.state !== 'poweredOn') {
-    var error = new Error('Could not start scanning, state is ' + this.state + ' (not poweredOn)');
+  var scan = function(state) {
+    if (state !== 'poweredOn') {
+      var error = new Error('Could not start scanning, state is ' + state + ' (not poweredOn)');
 
-    if (typeof callback === 'function') {
-      callback(error);
+      if (typeof callback === 'function') {
+        callback(error);
+      } else {
+        throw error;
+      }
     } else {
-      throw error;
-    }
-  } else {
-    if (callback) {
-      this.once('scanStart', function(filterDuplicates) {
-        callback(null, filterDuplicates);
-      });
-    }
+      if (callback) {
+        this.once('scanStart', function(filterDuplicates) {
+          callback(null, filterDuplicates);
+        });
+      }
 
-    this._discoveredPeripheralUUids = [];
-    this._allowDuplicates = allowDuplicates;
+      this._discoveredPeripheralUUids = [];
+      this._allowDuplicates = allowDuplicates;
 
-    this._bindings.startScanning(serviceUuids, allowDuplicates);
+      this._bindings.startScanning(serviceUuids, allowDuplicates);
+    }
+  };
+
+  //if bindings still not init, do it now
+  if (!this.initialized) {
+    this._bindings.init();
+    this.initialized = true;
+    this.once('stateChange', scan.bind(this));
+  }else{
+    scan.call(this, this._state);
   }
 };
 
@@ -5198,7 +5240,9 @@ Noble.prototype.stopScanning = function(callback) {
   if (callback) {
     this.once('scanStop', callback);
   }
-  this._bindings.stopScanning();
+  if(this._bindings && this.initialized){
+    this._bindings.stopScanning();
+  }
 };
 
 Noble.prototype.onScanStop = function() {
@@ -5374,9 +5418,7 @@ Noble.prototype.onRead = function(peripheralUuid, serviceUuid, characteristicUui
   if (characteristic) {
     characteristic.emit('data', data, isNotification);
 
-    if (!isNotification) {
-      characteristic.emit('read', data, isNotification); // for backwards compatbility
-    }
+    characteristic.emit('read', data, isNotification); // for backwards compatbility
   } else {
     this.emit('warning', 'unknown peripheral ' + peripheralUuid + ', ' + serviceUuid + ', ' + characteristicUuid + ' read!');
   }

@@ -15,7 +15,7 @@
   "main": "./src/SBrick.js",
   "scripts": {
     "test": "mocha",
-    "build": "webpack"
+    "build": "webpack && uglifyjs bin/sbrick.webbluetooth.js > bin/sbrick.webbluetooth.min.js"
   },
   "keywords": [
     "lego",
@@ -32,6 +32,7 @@
   "devDependencies": {
     "loglevel": "^1.4.1",
     "mocha": "^3.0.2",
+    "uglify-es": "^3.0.3",
     "webpack": "^2.3.3"
   }
 }
