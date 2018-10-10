@@ -1,6 +1,6 @@
 {
   "name": "sbrick-protocol",
-  "version": "2.0.3",
+  "version": "2.0.2",
   "author": "Zoltan Feher",
   "license": "MIT",
   "description": "Control the SBrick from nodejs",
@@ -22,8 +22,8 @@
     "bluetooth"
   ],
   "dependencies": {
-    "noble": "^1.9.1",
-    "promise-queue": "^2.2.5",
+    "noble": "^1.7.0",
+    "promise-queue": "^2.2.3",
     "winston": "^2.4.4"
   },
   "devDependencies": {
