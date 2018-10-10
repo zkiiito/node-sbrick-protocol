@@ -1,6 +1,6 @@
 {
   "name": "sbrick-protocol",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "author": "Zoltan Feher",
   "license": "MIT",
   "description": "Control the SBrick from nodejs",
