@@ -1,6 +1,9 @@
 ![david-dm](https://david-dm.org/zkiiito/node-sbrick-protocol.svg)
 
 # SBrick Protocol
+
+[![Greenkeeper badge](https://badges.greenkeeper.io/zkiiito/node-sbrick-protocol.svg)](https://greenkeeper.io/)
+
 Control your [Lego](https://lego.com) [SBrick](https://www.sbrick.com/) creations from node.js!
 
 I've written an article about this thing, [read it here](https://community.risingstack.com/node-js-iot-project-home-explorer-rover-with-lego-sbrick-raspberry-pi/)!
