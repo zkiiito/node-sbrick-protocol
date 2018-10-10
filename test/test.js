@@ -19,5 +19,16 @@ describe('SBrickChannelAdvertismentData', function () {
             assert.equal(false, sbrickData.secured);
             console.log(sbrickData);
         });
+
+        it('does not recognize other things', function () {
+            let error = false;
+            try {
+                SBrickChannelAdvertismentData.parse('0600010920020f2d103673ba5223469024a78f57a6b56b8e919c31c80f')
+            } catch (err) {
+                error = true;
+            }
+
+            assert.equal(true, error);
+        });
     });
 });

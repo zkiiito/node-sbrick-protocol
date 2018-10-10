@@ -15,13 +15,13 @@ SBrickAdvertisementData.parse = function (data) {
     let byteLength = 0;
     let nextByteLength = 2;
     let section = [];
-    let curSection = 1;
+    let curSection = 0;
     let advertisementData = new SBrickAdvertisementData();
 
     for (let byte of data) {
         if (i === nextByteLength) {
-            if (handleSection['s' + section[0]]) {
-                handleSection['s' + section[0]](advertisementData, section);
+            if (handleSection['s' + curSection]) {
+                handleSection['s' + curSection](advertisementData, section);
             }
             byteLength = byte;
             nextByteLength = i + byteLength + 1;
@@ -33,8 +33,8 @@ SBrickAdvertisementData.parse = function (data) {
         i++;
     }
 
-    if (handleSection['s' + section[0]]) {
-        handleSection['s' + section[0]](advertisementData, section);
+    if (handleSection['s' + curSection]) {
+        handleSection['s' + curSection](advertisementData, section);
     }
 
     return advertisementData;
@@ -42,7 +42,7 @@ SBrickAdvertisementData.parse = function (data) {
 
 const handleSection = {
     //header
-    s152: function (data, bytes) {
+    s0: function (data, bytes) {
         if (bytes[0] !== 152 || bytes[1] !== 1) {
             throw new Error('not SBrick');
         }
@@ -55,7 +55,7 @@ const handleSection = {
      Example 1: 02 00 00 - Product SBrick
      Example 2: 06 00 00 04 00 04 01 - Product SBrick, HW 4.0, FW 4.1
      */
-    s0: function (data, bytes) {
+    s1: function (data, bytes) {
         if (bytes[0] !== 0 || bytes[1] !== 0) {
             throw new Error('not SBrick');
         }
@@ -75,7 +75,7 @@ const handleSection = {
      Example, battery reading '12f0' on SBrick: 04 01 00 12 F0
      Example, temperature reading '12f0': 04 01 0e 12 F0
      */
-    s1: function (data, bytes) {
+    s2: function (data, bytes) {
 
     },
 
@@ -84,7 +84,7 @@ const handleSection = {
      02 < Device identifier string >
      Example, SBrick device ID: 07 02 0D 23 FC 19 87 63
      */
-    s2: function (data, bytes) {
+    s3: function (data, bytes) {
         bytes.shift();
         data.identifier = bytes.map(function (byte) {
             return ('00' + byte.toString(16)).substr(-2);
@@ -97,7 +97,7 @@ const handleSection = {
      00: Freely accessible
      01: Authentication needed for some functions
      */
-    s3: function (data, bytes) {
+    s4: function (data, bytes) {
         data.secured = bytes[1] === 1;
     }
 };
