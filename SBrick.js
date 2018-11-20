@@ -8,7 +8,7 @@
  */
 
 const noble = require('noble');
-const winston = require('winston');
+const { createLogger, transports } = require('winston');
 const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const Queue = require('promise-queue');
@@ -30,7 +30,7 @@ const nobleConnected = function () {
 
             const nobleConnectTimeout = setTimeout(() => {
                 noble.removeAllListeners('stateChange');
-                winston.warn('connect timeout');
+                SBrick.winston.warn('connect timeout');
                 reject('connect timeout');
             }, 1000);
 
@@ -89,9 +89,9 @@ SBrick.prototype.connect = function () {
         if (!this.connected) {
             let found = false; //somehow discover discovered the same sbrick multiple times
             nobleConnected().then(() => {
-                winston.info('scanning for', this.uuid);
+                SBrick.winston.info('scanning for', this.uuid);
                 noble.on('discover', (peripheral) => {
-                    winston.info('found', peripheral.uuid);
+                    SBrick.winston.info('found', peripheral.uuid);
                     if (!found && peripheral.uuid === this.uuid) {
                         found = true;
                         noble.stopScanning();
@@ -103,28 +103,28 @@ SBrick.prototype.connect = function () {
                             }
 
                             this.connected = true;
-                            winston.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
+                            SBrick.winston.info('connected to peripheral: ' + peripheral.uuid, peripheral.advertisement);
 
                             peripheral.once('disconnect', () => {
                                 clearInterval(this.runInterval);
                                 clearInterval(this.adcInterval);
                                 this.connected = false;
                                 this.authenticated = false;
-                                winston.warn('disconnected peripheral', this.uuid);
+                                SBrick.winston.warn('disconnected peripheral', this.uuid);
                                 this.emit('SBrick.disconnected');
                                 this.removeAllListeners();
                             });
 
                             peripheral.discoverServices(['4dc591b0857c41deb5f115abda665b0c'], (err, services) => {
                                 if (err) {
-                                    winston.warn('service discovery error', err);
+                                    SBrick.winston.warn('service discovery error', err);
                                     return reject(err);
                                 }
 
-                                winston.verbose('remote control service found');
+                                SBrick.winston.verbose('remote control service found');
 
                                 services[0].discoverCharacteristics(['02b8cbcc0e254bda8790a15f53e6010f'], (err, characteristics) => {
-                                    winston.verbose('remote control characteristic found');
+                                    SBrick.winston.verbose('remote control characteristic found');
                                     this.characteristic = characteristics[0];
                                     return resolve();
                                 });
@@ -170,7 +170,7 @@ SBrick.prototype.start = function (password) {
 
     this.characteristic.subscribe((err) => {
         if (err) {
-            winston.warn('subscribe error', err);
+            SBrick.winston.warn('subscribe error', err);
         }
     });
 
@@ -183,7 +183,7 @@ SBrick.prototype.start = function (password) {
                     });
                 });
             } else {
-                winston.verbose('queue full');
+                SBrick.winston.verbose('queue full');
             }
         }
     }, 200);
@@ -198,13 +198,13 @@ SBrick.prototype.start = function (password) {
             .then((temperature) => {
                 this.emit('SBrick.temperature', temperature);
             })
-            .catch(winston.warn);
+            .catch(SBrick.winston.warn);
     }, 1100);
 
     return this.isAuthenticated()
         .then((authenticated) => {
             if (authenticated) {
-                winston.info('authenticated');
+                SBrick.winston.info('authenticated');
                 return true;
             }
 
@@ -225,7 +225,7 @@ SBrick.prototype.login = function (userId, password) {
             return this.isAuthenticated();
         })
         .then((authenticated) => {
-            winston.info('authentication ' + (authenticated ? 'successful' : 'failed'));
+            SBrick.winston.info('authentication ' + (authenticated ? 'successful' : 'failed'));
             return authenticated ? true : Promise.reject('authentication failed');
         });
 };
@@ -242,20 +242,20 @@ SBrick.prototype.writeCommand = function (cmd) {
     }
 
     return new Promise((resolve, reject) => {
-        winston.verbose('write', cmd);
+        SBrick.winston.verbose('write', cmd);
         const now = new Date().getTime();
 
         // noble does not handle write errors correctly
         const writeErrorTimeout = setTimeout(() => {
-            winston.warn('write timeout');
+            SBrick.winston.warn('write timeout');
             reject('write timeout');
         }, 100);
 
         this.characteristic.write(cmd, false, (err) => {
-            winston.debug('write time: ', new Date().getTime() - now);
+            SBrick.winston.debug('write time: ', new Date().getTime() - now);
             clearTimeout(writeErrorTimeout);
             if (err) {
-                winston.warn('write error', err, cmd);
+                SBrick.winston.warn('write error', err, cmd);
                 return reject(err);
             }
             resolve();
@@ -273,7 +273,7 @@ SBrick.prototype.readCommand = function (cmd) {
     return new Promise((resolve, reject) => {
         this.writeCommand(cmd).then(() => {
             this.once('SBrick.read', (data) => {
-                winston.verbose('read', cmd, data);
+                SBrick.winston.verbose('read', cmd, data);
                 return resolve(data);
             });
             this.characteristic.read(); //trigger extra read, apart from subscribe
@@ -720,7 +720,7 @@ SBrick.prototype.getVoltageNotificationSetup = function () {
  */
 SBrick.scanSBricks = function () {
     return new Promise((resolve, reject) => {
-        winston.info('scanning...');
+        SBrick.winston.info('scanning...');
         nobleConnected().then(() => {
             const sbricks = [];
             noble.on('discover', (peripheral) => {
@@ -728,17 +728,17 @@ SBrick.scanSBricks = function () {
                 try {
                     let sbrickdata = SBrickAdvertisementData.parse(peripheral.advertisement.manufacturerData);
                     sbrickdata.uuid = peripheral.uuid;
-                    winston.info('SBrick', sbrickdata);
+                    SBrick.winston.info('SBrick', sbrickdata);
                     sbricks.push(sbrickdata);
                 } catch (err) {
-                    winston.info(peripheral.uuid, err);
+                    SBrick.winston.info(peripheral.uuid, err);
                 }
             });
 
             noble.startScanning();
 
             setTimeout(() => {
-                winston.info('scanning finished');
+                SBrick.winston.info('scanning finished');
                 noble.stopScanning();
                 noble.removeAllListeners('discover');
                 resolve(sbricks);
@@ -746,5 +746,11 @@ SBrick.scanSBricks = function () {
         }).catch(reject);
     });
 };
+
+SBrick.winston = createLogger({
+    transports: [new transports.Console()]
+});
+
+SBrickAdvertisementData.winston = SBrick.winston;
 
 module.exports = SBrick;
